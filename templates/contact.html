@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section>
+    <br>
+    <br>
+    <br>
+    <div class="row section-header section-header--dark">
+        <div class="column lg-12">
+            <h3 class="text-pretitle">Get In Touch</h3>
+            <h1 class="text-display-title">
+                Contact Me
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="column lg-12 tab-12">
+
+            <form method="post" novalidate>
+                {{ form.csrf_token }}
+                <div>
+                    {{ form.email.label }}
+                    {{ form.email(class="u-fullwidth", id="sampleInput", placeholder="youremail@email.com") }}
+                    {% for e in form.email.errors %}
+                    <div class="form-error u-add-bottom">{{ e }}</div>
+                    {% endfor %}
+                </div>
+                <div>
+                    {{ form.reason.label }}
+                    {{ form.reason(class="u-fullwidth", id="sampleRecipientInput") }}
+                    {% for e in form.reason.errors %}
+                    <div class="form-error u-add-bottom">{{ e }}</div>
+                    {% endfor %}
+                </div>
+
+                <label for="exampleMessage">{{ form.message.label }}</label>
+                {{ form.message(class="u-fullwidth", id="exampleMessage", placeholder="Your message") }}
+                {% for e in form.message.errors %}
+                <div class="form-error u-add-bottom">{{ e }}</div>
+                {% endfor %}
+
+                <label class="u-add-bottom">
+                    {{ form.send_copy() }}
+                    <span class="label-text">Send a copy to yourself</span>
+                </label>
+
+                {{ form.submit(class="btn--primary u-fullwidth") }}
+            </form>
+
+        </div>
+    </div>
+</section>
+{% endblock %}

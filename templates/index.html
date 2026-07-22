@@ -1,5 +1,17 @@
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %}
 
+{% block navbar %}
+<nav class="s-header__nav">
+    <ul>
+        <li class="current"><a href="#intro" class="smoothscroll">Intro</a></li>
+        <li><a href="#services" class="smoothscroll">What I Do</a></li>
+        <li><a href="#works" class="smoothscroll">My Work</a></li>
+        <li><a href="#contact" class="smoothscroll">Get In Touch</a></li>
+    </ul>
+</nav>
+{% endblock %}
+
+{% block content %}
 <!-- # intro
 ================================================== -->
 <section id="intro" class="s-intro target-section">
@@ -10,7 +22,9 @@
                 <span class="s-intro__bg"></span>
 
                 <h1 class="s-intro__text">
-                    Backend Developer <br> & 3D Artist<span>.</span>
+                    Backend Developer, <br>
+                    Frontend Developer <br>
+                    & 3D Artist<span>.</span>
                 </h1>
 
                 <a href="#services" class="s-intro__scroll-down smoothscroll">
@@ -48,7 +62,7 @@
         <div class="column lg-12">
             <h3 class="text-pretitle">What I Do</h3>
             <h1 class="text-display-title">
-                Placeholder Text
+                What Can I Do For You?
             </h1>
         </div>
     </div> <!-- end section-header -->
@@ -61,7 +75,22 @@
             </div>
             <div class="service-text">
                 <h3 class="h4">Backend Developer</h3>
-                <p>Nemo cupiditate ab quibusdam quaerat impedit magni. Earum suscipit ipsum laudantium.
+                <p>
+                    Nemo cupiditate ab quibusdam quaerat impedit magni. Earum suscipit ipsum laudantium.
+                    Quo delectus est. Maiores voluptas ab sit natus veritatis ut. Debitis nulla cumque veritatis.
+                    Sunt suscipit voluptas ipsa in tempora esse soluta sint aliquam rhoncus elit.
+                </p>
+            </div>
+        </div>
+
+        <div class="column service-item" data-animate-el>
+            <div class="service-icon-block">
+                <span class="service-icon service-icon--frontend"></span>
+            </div>
+            <div class="service-text">
+                <h3 class="h4">Frontend Developer</h3>
+                <p>
+                    Nemo cupiditate ab quibusdam quaerat impedit magni. Earum suscipit ipsum laudantium.
                     Quo delectus est. Maiores voluptas ab sit natus veritatis ut. Debitis nulla cumque veritatis.
                     Sunt suscipit voluptas ipsa in tempora esse soluta sint aliquam rhoncus elit.
                 </p>
@@ -74,7 +103,8 @@
             </div>
             <div class="service-text">
                 <h3 class="h4">3D Artist</h3>
-                <p>Nulla pharetra diam sit amet nisl suscipit adipiscing bibendum est. Quis risus sed vulputate
+                <p>
+                    Nulla pharetra diam sit amet nisl suscipit adipiscing bibendum est. Quis risus sed vulputate
                     odio ut. Lectus arcu bibendum at varius vel. Lorem ipsum dolor sit amet consectetur adipiscing
                     elit pellentesque. In nulla posuere sollicitudin aliquam ultrices.
                 </p>
@@ -242,7 +272,8 @@
                 </a>
                 <div class="folio-item__caption">
                     <p>
-                        Vero molestiae sed aut natus excepturi. Et tempora numquam. Temporibus iusto quo.Unde dolorem corrupti neque nisi.
+                        Vero molestiae sed aut natus excepturi. Et tempora numquam. Temporibus iusto quo.Unde dolorem
+                        corrupti neque nisi.
                     </p>
                 </div>
             </div>
@@ -274,7 +305,7 @@
                 distinctio.
             </p>
             <div class="btn-wrap">
-                <a href="#0" class="btn btn--primary">
+                <a href="{{ url_for('contact') }}" class="btn btn--primary">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                          style="fill:rgba(0, 0, 0, 1);transform:;-ms-filter:">
                         <path d="M20,4H4C2.897,4,2,4.897,2,6v12c0,1.103,0.897,2,2,2h16c1.103,0,2-0.897,2-2V6C22,4.897,21.103,4,20,4z M20,6v0.511 l-8,6.223L4,6.512V6H20z M4,18V9.044l7.386,5.745C11.566,14.93,11.783,15,12,15s0.434-0.07,0.614-0.211L20,9.044L20.002,18H4z"></path>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Kieran Christien | Backend Dev & 3D Artist</title>
+    <title>Kieran Christien | Backend Dev, Frontend Dev & 3D Artist</title>
 
     <script>
         document.documentElement.classList.remove('no-js');
@@ -55,14 +55,7 @@
         </div> <!-- end s-header__block -->
 
         <div class="row s-header__nav-wrap">
-            <nav class="s-header__nav">
-                <ul>
-                    <li class="current"><a href="#intro" class="smoothscroll">Intro</a></li>
-                    <li><a href="#services" class="smoothscroll">What I Do</a></li>
-                    <li><a href="#works" class="smoothscroll">My Work</a></li>
-                    <li><a href="#contact" class="smoothscroll">Get In Touch</a></li>
-                </ul>
-            </nav>
+            {% block navbar %} {% endblock %}
 
             <ul class="s-header__social">
                 <li>
