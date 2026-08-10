@@ -33,6 +33,7 @@ class EmailForm:
         ctx = ssl.create_default_context()
 
         for attempt in range(1, ATTEMPTS + 1):
+            print("EMAIL SEND START", flush=True)
             try:
                 with smtplib.SMTP(host=SMTP_ADDRESS, port=SMTP_PORT, timeout=30) as conn:
                     conn.ehlo()
@@ -53,12 +54,13 @@ class EmailForm:
 
                         conn.send_message(copy_msg)
 
+                print("EMAIL SEND SUCCESS", flush=True)
                 break
 
             except Exception as e:
                 print(f"Email send attempt {attempt} failed: {e}")
                 traceback.print_exc()
-                if attempt < attempts:
+                if attempt < ATTEMPTS:
                     time.sleep(1 + attempt)  # small backoff
                 else:
-                    print("All email send attempts failed.")
+                    print("Gmail SMTP send failed:", repr(e), flush=True)
