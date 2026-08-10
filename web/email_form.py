@@ -35,7 +35,7 @@ class EmailForm:
         for attempt in range(1, ATTEMPTS + 1):
             print("EMAIL SEND START", flush=True)
             try:
-                with smtplib.SMTP(host=SMTP_ADDRESS, port=SMTP_PORT, timeout=30) as conn:
+                with smtplib.SMTP(host=SMTP_ADDRESS, port=SMTP_PORT, timeout=60) as conn:
                     conn.ehlo()
                     # STARTTLS on port 587
                     conn.starttls(context=ctx)
