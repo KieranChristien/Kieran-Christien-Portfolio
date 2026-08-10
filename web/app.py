@@ -1,8 +1,8 @@
 from dotenv import load_dotenv
-from email_form import EmailForm
 from flask import Flask, render_template, redirect, url_for
 from flask_bootstrap import Bootstrap
-from form import ContactForm
+from web.email_form import EmailForm
+from web.form import ContactForm
 import os
 
 load_dotenv()
