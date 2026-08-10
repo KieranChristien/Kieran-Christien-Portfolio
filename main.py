@@ -1,6 +1,8 @@
 from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, url_for
 from flask_bootstrap import Bootstrap
+
+from email_form import EmailForm
 from form import ContactForm
 import os
 
@@ -18,7 +20,15 @@ def home():
 def contact():
     form = ContactForm()
     if form.validate_on_submit():
-        print(f"email: {form.email.data} reason: {form.reason.data} message: {form.message.data} copy: {form.send_copy.data}")
+        email_form = EmailForm(
+            form.name.data,
+            form.email.data,
+            form.reason.data,
+            form.message.data,
+            form.send_copy.data,
+        )
+        email_form.send()
+
         return redirect(url_for('home'))
     return render_template('contact.html', form=form)
 

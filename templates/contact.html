@@ -20,15 +20,22 @@
             <form method="post" novalidate>
                 {{ form.csrf_token }}
                 <div>
-                    {{ form.email.label }}
-                    {{ form.email(class="u-fullwidth", id="sampleInput", placeholder="youremail@email.com") }}
-                    {% for e in form.email.errors %}
+                    {{ form.name.label }}
+                    {{ form.name(class="u-fullwidth", id="sampleInput", placeholder="Kieran Christien") }}
+                    {% for e in form.name.errors %}
                     <div class="form-error u-add-bottom">{{ e }}</div>
                     {% endfor %}
                 </div>
                 <div>
+                    {{ form.email.label }}
+                    {{ form.email(class="u-fullwidth", id="sampleInput", placeholder="kieranchristien@gmail.com") }}
+                    {% for e in form.email.errors %}
+                    <div class="form-error u-add-bottom">{{ e }}</div>
+                    {% endfor %}
+                </div>
+                <div class="ss-custom-select">
                     {{ form.reason.label }}
-                    {{ form.reason(class="u-fullwidth", id="sampleRecipientInput") }}
+                    {{ form.reason(class="u-fullwidth ", id="sampleRecipientInput") }}
                     {% for e in form.reason.errors %}
                     <div class="form-error u-add-bottom">{{ e }}</div>
                     {% endfor %}

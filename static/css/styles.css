@@ -3202,13 +3202,13 @@ img.u-pull-left {
 }
 
 .s-intro__bg {
-    background-image    : url(../images/intro-bg.jpg);
+    background-image    : url(../images/intro-bg.png);
     background-repeat   : no-repeat;
     background-position : center;
     background-size     : cover;
     width               : 100%;
     position            : absolute;
-    top                 : calc(1.5 * var(--text-huge-line-height) * var(--text-huge) * var(--text-huge-multiplier));
+    top                 : calc(-1.5 * var(--text-huge-line-height) * var(--text-huge) * var(--text-huge-multiplier));
     right               : 0;
     bottom              : 0;
     left                : 0;
@@ -3288,27 +3288,15 @@ img.u-pull-left {
     flex             : none;
     width            : 75%;
     max-width        : 880px;
-    background-color : rgba(10, 11, 11, 0.75);
+    background-color : rgb(31, 146, 135, 0.75);
     font-weight      : 300;
     font-size        : calc(var(--text-size) * 1.1111);
     line-height      : var(--vspace-1_25);
-    color            : var(--color-text-light);
-    margin-top       : calc(var(--vspace-3) * -1);
+    color            : white;
+    margin-top       : calc(var(--vspace-3) * -0.5);
     margin-bottom    : var(--vspace-3_5);
-    padding          : var(--vspace-2_5) var(--vspace-3) var(--vspace-2);
+    padding          : var(--vspace-1_5) var(--vspace-3) var(--vspace-1);
     position         : relative;
-}
-
-.s-intro__about::before {
-    content          : "";
-    display          : block;
-    width            : 1px;
-    height           : var(--vspace-2);
-    background-color : var(--color-1);
-    transform        : translateX(-50%);
-    position         : absolute;
-    top              : calc(var(--vspace-1) * -1);
-    left             : 50%;
 }
 
 .s-intro__about .s-intro__about-title {
@@ -3316,7 +3304,7 @@ img.u-pull-left {
     font-size     : var(--text-lg);
     line-height   : var(--vspace-1);
     margin-top    : 0;
-    margin-bottom : var(--vspace-2);
+    margin-bottom : var(--vspace-1);
 }
 
 /* --------------------------------------------------------------------
