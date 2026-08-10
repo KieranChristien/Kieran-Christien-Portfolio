@@ -7,7 +7,7 @@ env = os.environ
 
 ATTEMPTS = 2
 
-EMAIL_ADDRESS: str = env.get("EMAIL_ADDRESS", "")
+MY_EMAIL: str = env.get("EMAIL_ADDRESS", "")
 EMAIL_PASSWORD: str = env.get("EMAIL_PASSWORD", "")
 MAILJET_API_KEY: str = env.get("MAILJET_API_KEY", "")
 MAILJET_SECRET_KEY: str = env.get("MAILJET_SECRET_KEY", "")
@@ -21,28 +21,54 @@ class EmailForm:
         self.message = msg
         self.send_copy = send_copy
 
-    def _make_message(self, to_addr, subject):
-        data = {
-            'Messages': [
+    def _make_message(self):
+        msg = {
+            "From": {
+                "Email": "contact@kieran-christien-dev.com",
+                "Name": "Me"
+            },
+            "To": [
                 {
-                    "From": {
-                        "Email": EMAIL_ADDRESS,
-                        "Name": "Me"
-                    },
-                    "To": [
-                        {
-                            "Email": to_addr,
-                            "Name": "You"
-                        }
-                    ],
-                    "Subject": subject,
-                    "TextPart": self.message,
-                    "HTMLPart": self.message
+                    "Email": MY_EMAIL,
+                    "Name": "Kieran Christien"
                 }
-            ]
+            ],
+            "ReplyTo": {
+                "Email": self.email,
+                "Name": self.name
+            },
+            "Subject": f"[{self.reason}] From {self.name}",
+            "TextPart": f"Message from {self.name}:\n\n"
+                        f"{self.message}"
         }
 
-        return data
+        msg_copy = {
+            "From": {
+                "Email": "contact@kieran-christien-dev.com",
+                "Name": "Me"
+            },
+            "To": [
+                {
+                    "Email": self.email,
+                    "Name": self.name
+                }
+            ],
+            "ReplyTo": {
+                "Email": MY_EMAIL,
+                "Name": "Kieran Christien"
+            },
+            "Subject": f"[{self.reason}] Request Copy",
+            "TextPart": f"Thanks for contacting me {self.name}. I received your message and will reply within 2 business days.\n\n"
+                        f"Your message:\n {self.message}"
+        }
+
+        messages = [
+            msg
+        ]
+        if self.send_copy:
+            messages.append(msg_copy)
+
+        return {'Messages': messages}
 
     def send(self):
         if not MAILJET_API_KEY or not MAILJET_SECRET_KEY:
@@ -53,18 +79,14 @@ class EmailForm:
             print("EMAIL SEND START", flush=True)
             with Client(auth=(MAILJET_API_KEY, MAILJET_SECRET_KEY), version='v3.1') as client:
                 # Send to inbox
-                subject = f"[{self.reason}] Requested From {self.name} ({self.email})"
-                msg = self._make_message(to_addr=EMAIL_ADDRESS, subject=subject)
+                try:
+                    result = client.send.create(data=self._make_message())
+                except Exception as e:
+                    print("Mailjet API call failed: ", e, flush=True)
+                    return
 
-                result = client.send.create(data=msg)
-
-                # Send copy if requested
-                if self.send_copy:
-                    copy_subject = f"[{self.reason}] Requested"
-                    copy_msg = self._make_message(to_addr=self.email, subject=copy_subject)
-
-                    client.send.create(data=copy_msg)
-
-                if result.status_code == 200:
+                if 200 <= result.status_code < 300:
                     print("EMAIL SEND SUCCESS", flush=True)
                     break
+                else:
+                    print("EMAIL SEND FAIL", flush=True)
