@@ -1,10 +1,9 @@
 from dotenv import load_dotenv
-from concurrent.futures import ThreadPoolExecutor
 from email_form import EmailForm
 from flask import Flask, render_template, redirect, url_for
 from flask_bootstrap import Bootstrap
 from form import ContactForm
-import os, socket
+import os
 
 load_dotenv()
 env = os.environ
@@ -12,19 +11,6 @@ env = os.environ
 app = Flask(__name__)
 app.config['SECRET_KEY'] = env.get('SECRET_KEY')
 Bootstrap(app)
-
-_executor = ThreadPoolExecutor(max_workers=4)
-
-host = os.environ.get("SMTP_ADDRESS")
-port = int(os.environ.get("SMTP_PORT", "587"))
-try:
-    print("Resolving", host)
-    print(socket.getaddrinfo(host, port))
-    s = socket.create_connection((host, port), timeout=10)
-    print("Connected", s.getpeername())
-    s.close()
-except Exception as e:
-    print("CONNECT ERROR:", repr(e))
 
 @app.route('/')
 def home():
@@ -43,7 +29,7 @@ def contact():
             form.send_copy.data,
         )
 
-        _executor.submit(email.send)
+        email.send()
 
         return redirect(url_for('home'), 303)
     return render_template('contact.html', form=form)

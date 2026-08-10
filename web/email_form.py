@@ -1,6 +1,6 @@
-from email.message import EmailMessage
 from dotenv import load_dotenv
-import os, smtplib, ssl, time, traceback
+from mailjet_rest import Client
+import os
 
 load_dotenv()
 env = os.environ
@@ -9,8 +9,8 @@ ATTEMPTS = 2
 
 EMAIL_ADDRESS: str = env.get("EMAIL_ADDRESS", "")
 EMAIL_PASSWORD: str = env.get("EMAIL_PASSWORD", "")
-SMTP_ADDRESS: str = env.get("SMTP_ADDRESS", "")
-SMTP_PORT: int = int(env.get("SMTP_PORT", "587"))  # 587 for STARTTLS
+MAILJET_API_KEY: str = env.get("MAILJET_API_KEY", "")
+MAILJET_SECRET_KEY: str = env.get("MAILJET_SECRET_KEY", "")
 
 
 class EmailForm:
@@ -22,45 +22,49 @@ class EmailForm:
         self.send_copy = send_copy
 
     def _make_message(self, to_addr, subject):
-        msg = EmailMessage()
-        msg['Subject'] = subject
-        msg['From'] = EMAIL_ADDRESS
-        msg['To'] = to_addr
-        msg.set_content(self.message)
-        return msg
+        data = {
+            'Messages': [
+                {
+                    "From": {
+                        "Email": EMAIL_ADDRESS,
+                        "Name": "Me"
+                    },
+                    "To": [
+                        {
+                            "Email": to_addr,
+                            "Name": "You"
+                        }
+                    ],
+                    "Subject": subject,
+                    "TextPart": self.message,
+                    "HTMLPart": self.message
+                }
+            ]
+        }
+
+        return data
 
     def send(self):
-        ctx = ssl.create_default_context()
+        if not MAILJET_API_KEY or not MAILJET_SECRET_KEY:
+            print("Mailjet API credentials missing", flush=True)
+            return
 
         for attempt in range(1, ATTEMPTS + 1):
             print("EMAIL SEND START", flush=True)
-            try:
-                with smtplib.SMTP(host=SMTP_ADDRESS, port=SMTP_PORT, timeout=60) as conn:
-                    conn.ehlo()
-                    # STARTTLS on port 587
-                    conn.starttls(context=ctx)
-                    conn.ehlo()
-                    conn.login(user=EMAIL_ADDRESS, password=EMAIL_PASSWORD)
+            with Client(auth=(MAILJET_API_KEY, MAILJET_SECRET_KEY), version='v3.1') as client:
+                # Send to inbox
+                subject = f"[{self.reason}] Requested From {self.name} ({self.email})"
+                msg = self._make_message(to_addr=EMAIL_ADDRESS, subject=subject)
 
-                    # Send to inbox
-                    subject = f"[{self.reason}] Requested From {self.name} ({self.email})"
-                    msg = self._make_message(to_addr=EMAIL_ADDRESS, subject=subject)
-                    conn.send_message(msg)
+                result = client.send.create(data=msg)
 
-                    # Send copy if requested
-                    if self.send_copy:
-                        copy_subject = f"[{self.reason}] Requested"
-                        copy_msg = self._make_message(to_addr=self.email, subject=copy_subject)
+                # Send copy if requested
+                if self.send_copy:
+                    copy_subject = f"[{self.reason}] Requested"
+                    copy_msg = self._make_message(to_addr=self.email, subject=copy_subject)
 
-                        conn.send_message(copy_msg)
+                    client.send.create(data=copy_msg)
 
-                print("EMAIL SEND SUCCESS", flush=True)
-                break
-
-            except Exception as e:
-                print(f"Email send attempt {attempt} failed: {e}")
-                traceback.print_exc()
-                if attempt < ATTEMPTS:
-                    time.sleep(1 + attempt)  # small backoff
-                else:
-                    print("Gmail SMTP send failed:", repr(e), flush=True)
+                if result.status_code == 200:
+                    print("EMAIL SEND SUCCESS", flush=True)
+                    break
