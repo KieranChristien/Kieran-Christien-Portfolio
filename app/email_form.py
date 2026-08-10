@@ -10,7 +10,7 @@ ATTEMPTS = 2
 EMAIL_ADDRESS: str = env.get("EMAIL_ADDRESS", "")
 EMAIL_PASSWORD: str = env.get("EMAIL_PASSWORD", "")
 SMTP_ADDRESS: str = env.get("SMTP_ADDRESS", "")
-SMTP_PORT: int = int(env.get("SMTP_PORT", "587")) # 587 for STARTTLS
+SMTP_PORT: int = int(env.get("SMTP_PORT", "587"))  # 587 for STARTTLS
 
 
 class EmailForm:
