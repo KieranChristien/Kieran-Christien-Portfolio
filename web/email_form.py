@@ -25,7 +25,7 @@ class EmailForm:
         msg = {
             "From": {
                 "Email": "contact@kieran-christien-dev.com",
-                "Name": "Me"
+                "Name": "Kieran Christien Dev"
             },
             "To": [
                 {
@@ -45,7 +45,7 @@ class EmailForm:
         msg_copy = {
             "From": {
                 "Email": "contact@kieran-christien-dev.com",
-                "Name": "Me"
+                "Name": "Kieran Christien Dev"
             },
             "To": [
                 {
@@ -57,7 +57,7 @@ class EmailForm:
                 "Email": MY_EMAIL,
                 "Name": "Kieran Christien"
             },
-            "Subject": f"[{self.reason}] Request Copy",
+            "Subject": f"Contact Form",
             "TextPart": f"Thanks for contacting me {self.name}. I received your message and will reply within 2 business days.\n\n"
                         f"Your message:\n {self.message}"
         }
