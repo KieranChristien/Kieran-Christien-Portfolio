@@ -38,8 +38,7 @@ class EmailForm:
                 "Name": self.name
             },
             "Subject": f"[{self.reason}] From {self.name}",
-            "TextPart": f"Message from {self.name}:\n\n"
-                        f"{self.message}"
+            "TextPart": self.message
         }
 
         msg_copy = {
