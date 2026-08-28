@@ -6,7 +6,7 @@
     <ul>
         {% if current_user.is_authenticated %}
         <li>
-            <form class="logout-form" method="POST" action="{{ url_for('logout') }}">
+            <form class="logout-form" method="POST" action="{{ url_for('auth.logout') }}">
                 <button type="submit" class="logout">Logout</button>
             </form>
         </li>
@@ -145,7 +145,7 @@
 
                 <!-- POST form for deletion (CSRF token included) -->
                 <form id="confirmDeleteForm" method="post"
-                      action="{{ url_for('delete_project', project_id=project_id) }}">
+                      action="{{ url_for('projects.delete', project_id=project_id) }}">
                     {{ form.csrf_token }}
                     <div>
                         <button type="submit" id="confirmDeleteBtn" class="btn u-fullwidth">Confirm Delete

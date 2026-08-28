@@ -1,6 +1,6 @@
+import os
 from dotenv import load_dotenv
 from mailjet_rest import Client
-import os
 
 load_dotenv()
 env = os.environ

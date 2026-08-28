@@ -6,7 +6,7 @@
     <ul>
         {% if current_user.is_authenticated %}
         <li>
-            <form class="logout-form" method="POST" action="{{ url_for('logout') }}">
+            <form class="logout-form" method="POST" action="{{ url_for('auth.logout') }}">
                 <button type="submit" class="logout">Logout</button>
             </form>
         </li>
