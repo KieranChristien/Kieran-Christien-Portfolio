@@ -1,3 +1,4 @@
+import os
 from flask import current_app
 from flask_login import UserMixin
 from sqlalchemy.orm import Mapped, mapped_column
@@ -49,9 +50,9 @@ def ensure_owner():
         return
 
     admin = Admin(
-        email=current_app.config["OWNER_EMAIL"],
-        name=current_app.config["OWNER_NAME"],
-        password=generate_password_hash(current_app.config["OWNER_PASSWORD"], method="pbkdf2:sha256", salt_length=16),
+        email=os.environ.get("OWNER_EMAIL"),
+        name=os.environ.get("OWNER_NAME"),
+        password=generate_password_hash(os.environ.get("OWNER_PASSWORD"), method="pbkdf2:sha256", salt_length=16),
     )
 
     db.session.add(admin)
