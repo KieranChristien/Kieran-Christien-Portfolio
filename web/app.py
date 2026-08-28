@@ -45,6 +45,7 @@ OWNER_PASSWORD = env.get("OWNER_PASSWORD")
 OWNER_NAME = env.get("OWNER_NAME", "Admin")
 
 app = Flask(__name__)
+app.config['RATELIMIT_STORAGE_URI'] = env.get("STORAGE_URI", "memory://")
 app.config['SECRET_KEY'] = env.get('SECRET_KEY')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 Bootstrap(app)
@@ -58,7 +59,10 @@ cloudinary.config(
 )
 
 # Configure Flask-Limiter
-limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+)
 limiter.init_app(app)
 
 # Configure Flask-Login
@@ -388,6 +392,7 @@ def add_project():
 
         db.session.add(project)
         db.session.commit()
+
         current_app.logger.info("Admin %s created project %s", current_user.name, project.title)
         return redirect(url_for('home'), 303)
 
