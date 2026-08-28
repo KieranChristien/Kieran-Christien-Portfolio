@@ -7,11 +7,27 @@
         <li><a href="#services" class="smoothscroll">What I Do</a></li>
         <li><a href="#works" class="smoothscroll">My Work</a></li>
         <li><a href="#contact" class="smoothscroll">Get In Touch</a></li>
+        {% if current_user.is_authenticated %}
+        <li>
+            <form class="logout-form" method="POST" action="{{ url_for('logout') }}">
+                <button type="submit" class="logout">Logout</button>
+            </form>
+        </li>
+        {% endif %}
     </ul>
 </nav>
 {% endblock %}
 
 {% block content %}
+
+<section id="flash">
+    <div class="row">
+        <div class="column">
+
+        </div>
+    </div>
+</section>
+
 <!-- # intro
 ================================================== -->
 <section id="intro" class="s-intro target-section">
@@ -132,156 +148,49 @@
     </div> <!-- end section-header -->
 
     <div class="row folio-list block-lg-one-third block-tab-one-half block-stack-on-550 collapse" data-animate-block>
-
+        {% for project in projects %}
         <div class="column">
             <div class="folio-item" data-animate-el>
                 <div class="folio-item__thumb">
                     <a class="folio-item__thumb-link"
-                       href="{{ url_for('static', filename='images/portfolio/gallery/g-tulips.jpg') }}"
-                       title="The Red Wheel"
-                       data-size="1050x700">
-                        <img src="{{ url_for('static', filename='images/portfolio/tulips.jpg') }}"
-                             srcset="{{ url_for('static', filename='images/portfolio/tulips.jpg') }} 1x, {{ url_for('static', filename='images/portfolio/tulips@2x.jpg') }} 2x"
-                             alt="">
+                       href="{{ project.image }}"
+                       title="{{ project.title }}"
+                       data-size="{{ project.image_width }}x{{ project.image_height }}">
+                        <img src="{{ project.thumbnail_1x }}"
+                             srcset="{{ project.thumbnail_1x }} 1x, {{ project.thumbnail_2x }} 2x"
+                             alt="{{ project.thumbnail_alt }}">
                     </a>
                 </div>
                 <div class="folio-item__info">
-                    <div class="folio-item__cat">Branding</div>
-                    <h4 class="folio-item__title">Coffee & Tulips</h4>
+                    <div class="folio-item__cat">{{ project.category }}</div>
+                    <h4 class="folio-item__title">{{ project.title }}</h4>
                 </div>
-                <a href="https://www.behance.net/" title="Project Link" class="folio-item__project-link">
-                    Project Link
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('edit_project', project_id=project.id) }}" title="Edit"
+                   class="folio-item__project-link">
+                    Edit
                 </a>
-                <div class="folio-item__caption">
-                    <p>Vero molestiae sed aut natus excepturi. Et tempora numquam. Temporibus iusto quo.Unde dolorem
-                        corrupti neque nisi.</p>
-                </div>
-            </div>
-        </div> <!-- end column -->
-        <div class="column">
-            <div class="folio-item" data-animate-el>
-                <div class="folio-item__thumb">
-                    <a class="folio-item__thumb-link"
-                       href="{{ url_for('static', filename='images/portfolio/gallery/g-minimalismo.jpg') }}"
-                       title="Music Life" data-size="1050x700">
-                        <img src="{{ url_for('static', filename='images/portfolio/minimalismo.jpg') }}"
-                             srcset="{{ url_for('static', filename='images/portfolio/minimalismo.jpg') }} 1x, {{ url_for('static', filename='images/portfolio/minimalismo@2x.jpg') }} 2x"
-                             alt="">
-                    </a>
-                </div>
-                <div class="folio-item__info">
-                    <div class="folio-item__cat">Frontend Design</div>
-                    <h4 class="folio-item__title">Minimalismo</h4>
-                </div>
-                <a href="https://www.behance.net/" title="Project Link" class="folio-item__project-link">
-                    Project Link
+                {% else %}
+                <a href="{{ project.url }}" title="{{ project.url_name }}" class="folio-item__project-link">
+                    {{ project.url_name }}
                 </a>
+                {% endif %}
                 <div class="folio-item__caption">
-                    <p>Vero molestiae sed aut natus excepturi. Et tempora numquam. Temporibus iusto quo.Unde dolorem
-                        corrupti neque nisi.</p>
+                    <p>{{ project.caption }}</p>
                 </div>
             </div>
         </div> <!-- end column -->
-        <div class="column">
-            <div class="folio-item" data-animate-el>
-                <div class="folio-item__thumb">
-                    <a class="folio-item__thumb-link"
-                       href="{{ url_for('static', filename='images/portfolio/gallery/g-skaterboy.jpg') }}"
-                       Title="OI Logo"
-                       data-size="1050x700">
-                        <img src="{{ url_for('static', filename='images/portfolio/skaterboy.jpg') }}"
-                             srcset="{{ url_for('static', filename='images/portfolio/skaterboy.jpg') }} 1x, {{ url_for('static', filename='images/portfolio/skaterboy@2x.jpg') }} 2x"
-                             alt="">
-                    </a>
-                </div>
-                <div class="folio-item__info">
-                    <div class="folio-item__cat">Product Design</div>
-                    <h4 class="folio-item__title">Skaterboy</h4>
-                </div>
-                <a href="https://www.behance.net/" title="Project Link" class="folio-item__project-link">Project
-                    Link</a>
-                <div class="folio-item__caption">
-                    <p>Vero molestiae sed aut natus excepturi. Et tempora numquam. Temporibus iusto quo.Unde dolorem
-                        corrupti neque nisi.</p>
-                </div>
-            </div>
-        </div> <!-- end column -->
-        <div class="column">
-            <div class="folio-item" data-animate-el>
-                <div class="folio-item__thumb">
-                    <a class="folio-item__thumb-link"
-                       href="{{ url_for('static', filename='images/portfolio/gallery/g-rucksack.jpg') }}"
-                       title="Corrugated Sheets" data-size="1050x700">
-                        <img src="{{ url_for('static', filename='images/portfolio/rucksack.jpg') }}"
-                             srcset="{{ url_for('static', filename='images/portfolio/rucksack.jpg') }} 1x, {{ url_for('static', filename='images/portfolio/rucksack@2x.jpg') }} 2x"
-                             alt="">
-                    </a>
-                </div>
-                <div class="folio-item__info">
-                    <div class="folio-item__cat">Frontend Design</div>
-                    <h4 class="folio-item__title">Rucksack</h4>
-                </div>
-                <a href="https://www.behance.net/" title="Project Link" class="folio-item__project-link">Project
-                    Link</a>
-                <div class="folio-item__caption">
-                    <p>Vero molestiae sed aut natus excepturi. Et tempora numquam. Temporibus iusto quo.Unde dolorem
-                        corrupti neque nisi.</p>
-                </div>
-            </div>
-        </div> <!-- end column -->
-        <div class="column">
-            <div class="folio-item" data-animate-el>
-                <div class="folio-item__thumb">
-                    <a class="folio-item__thumb-link"
-                       href="{{ url_for('static', filename='images/portfolio/gallery/g-woodcraft.jpg') }}"
-                       title="Sand Dunes"
-                       data-size="1050x700">
-                        <img src="{{ url_for('static', filename='images/portfolio/woodcraft.jpg') }}"
-                             srcset="{{ url_for('static', filename='images/portfolio/woodcraft.jpg') }} 1x, {{ url_for('static', filename='images/portfolio/woodcraft@2x.jpg') }} 2x"
-                             alt="">
-                    </a>
-                </div>
-                <div class="folio-item__info">
-                    <div class="folio-item__cat">E-Commerce</div>
-                    <h4 class="folio-item__title">Wooocraft</h4>
-                </div>
-                <a href="https://www.behance.net/" title="Project Link" class="folio-item__project-link">
-                    Project Link
-                </a>
-                <div class="folio-item__caption">
-                    <p>Vero molestiae sed aut natus excepturi. Et tempora numquam. Temporibus iusto quo.Unde dolorem
-                        corrupti neque nisi.</p>
-                </div>
-            </div>
-        </div> <!-- end column -->
-        <div class="column">
-            <div class="folio-item" data-animate-el>
-                <div class="folio-item__thumb">
-                    <a class="folio-item__thumb-link"
-                       href="{{ url_for('static', filename='images/portfolio/gallery/g-lamp.jpg') }}" title="The Lamp"
-                       data-size="1050x700">
-                        <img src="{{ url_for('static', filename='images/portfolio/lamp.jpg') }}"
-                             srcset="{{ url_for('static', filename='images/portfolio/lamp.jpg') }} 1x, {{ url_for('static', filename='images/portfolio/lamp@2x.jpg') }} 2x"
-                             alt="">
-                    </a>
-                </div>
-                <div class="folio-item__info">
-                    <div class="folio-item__cat">Product Design</div>
-                    <h4 class="folio-item__title">The Lamp</h4>
-                </div>
-                <a href="https://www.behance.net/" title="Project Link" class="folio-item__project-link">
-                    Project Link
-                </a>
-                <div class="folio-item__caption">
-                    <p>
-                        Vero molestiae sed aut natus excepturi. Et tempora numquam. Temporibus iusto quo.Unde dolorem
-                        corrupti neque nisi.
-                    </p>
-                </div>
-            </div>
-        </div> <!-- end column -->
+        {% endfor%}
 
     </div> <!-- folio-list -->
+
+    {% if current_user.is_authenticated %}
+    <div class="row">
+        <div class="column lg-12 tab-12">
+            <a class="btn btn--primary u-fullwidth" href="{{ url_for('add_project') }}">Add Project</a>
+        </div>
+    </div>
+    {% endif %}
 
 </section> <!-- end s-works -->
 

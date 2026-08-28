@@ -70,22 +70,19 @@ class EmailForm:
         return {'Messages': messages}
 
     def send(self):
+        """
+        Send Email wrapper: returns (flash_message, error_message)\n
+        On success: (None, None)\n
+        On failure: ('human message', 'human message')
+        """
         if not MAILJET_API_KEY or not MAILJET_SECRET_KEY:
-            print("Mailjet API credentials missing", flush=True)
-            return
+            return "Email failed to send.", "Mailjet API credentials missing."
 
-        for attempt in range(1, ATTEMPTS + 1):
-            print("EMAIL SEND START", flush=True)
-            with Client(auth=(MAILJET_API_KEY, MAILJET_SECRET_KEY), version='v3.1') as client:
-                # Send to inbox
-                try:
-                    result = client.send.create(data=self._make_message())
-                except Exception as e:
-                    print("Mailjet API call failed: ", e, flush=True)
-                    return
+        with Client(auth=(MAILJET_API_KEY, MAILJET_SECRET_KEY), version='v3.1') as client:
+            # Send to inbox
+            try:
+                client.send.create(data=self._make_message())
+            except Exception as e:
+                return None, "Email failed to send.", f"Mailjet API call failed: {e}"
 
-                if 200 <= result.status_code < 300:
-                    print("EMAIL SEND SUCCESS", flush=True)
-                    break
-                else:
-                    print("EMAIL SEND FAIL", flush=True)
+            return None, None

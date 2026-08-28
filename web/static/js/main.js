@@ -279,61 +279,152 @@
     * ----------------------------------------------------- */
     const ssPhotoswipe = function () {
 
-        const items = [];
         const pswp = document.querySelectorAll('.pswp')[0];
-        const folioItems = document.querySelectorAll('.folio-item');
+        const allFolioSelector = '.folio-item';
+        if (!pswp) return;
 
-        if (!(pswp && folioItems)) return;
+        // internal arrays
+        let staticItems = [];
+        let dynamicItems = [];
 
-        folioItems.forEach(function (folioItem) {
+        // returns a Promise that resolves to a "WxH" string (e.g. "1600x1200")
+        function getImageSize(src) {
+            return new Promise(function (resolve) {
+                const img = new Image();
+                img.onload = function () {
+                    resolve(img.naturalWidth + 'x' + img.naturalHeight);
+                };
+                img.onerror = function () {
+                    resolve('0x0'); // fallback same format as dataset.size default
+                };
+                // set crossOrigin if you need to load images from other origins and they allow CORS
+                // img.crossOrigin = 'anonymous';
+                img.src = src;
+            });
+        }
 
-            let folio = folioItem;
-            let thumbLink = folio.querySelector('.folio-item__thumb-link');
-            let title = folio.querySelector('.folio-item__title');
-            let caption = folio.querySelector('.folio-item__caption');
-            let titleText = '<h4>' + title.innerHTML + '</h4>';
-            let captionText = caption.innerHTML;
-            let href = thumbLink.getAttribute('href');
-            let size = thumbLink.dataset.size.split('x');
-            let width = size[0];
-            let height = size[1];
+        // helper: build item from a folio DOM node (same logic for both lists)
+        function buildItemFromNode(folio) {
+            if (!folio) return null;
+            const thumbLink = folio.querySelector('.folio-item__thumb-link');
+            if (!thumbLink) return null;
 
-            let item = {
+            const titleEl = folio.querySelector('.folio-item__title');
+            const captionEl = folio.querySelector('.folio-item__caption');
+
+            const href = thumbLink.getAttribute('href');
+            const sizeData = thumbLink.dataset.size || '0x0';
+            const size = sizeData.split('x');
+            const width = parseInt(size[0], 10) || 0;
+            const height = parseInt(size[1], 10) || 0;
+
+            const item = {
                 src: href,
                 w: width,
                 h: height
+            };
+
+            // Helper: plain-text extractor
+            function getText(el) {
+                return el ? el.textContent.trim() : '';
             }
 
-            if (caption) {
-                item.title = titleText.trim() + captionText.trim();
+            // Keep HTML for PhotoSwipe caption, but also store plain text for sharing
+            if (titleEl || captionEl) {
+                const htmlTitle = titleEl ? '<h4>' + titleEl.textContent.trim() + '</h4>' : '';
+                const htmlCaption = captionEl ? captionEl.innerHTML : ''; // keep caption HTML if you want formatting
+                item.title = (htmlTitle + htmlCaption).trim();
+
+                // Plain-text field used for share/tweet text
+                item.titleText = (getText(titleEl) + (captionEl ? '\n' + getText(captionEl) : '')).trim();
             }
 
-            items.push(item);
+            return item;
+        }
 
-        });
-
-        // bind click event
-        folioItems.forEach(function (folioItem, i) {
-
-            let thumbLink = folioItem.querySelector('.folio-item__thumb-link');
-
-            thumbLink.addEventListener('click', function (event) {
-
-                event.preventDefault();
-
-                let options = {
-                    index: i,
-                    showHideOpacity: true
-                }
-
-                // initialize PhotoSwipe
-                let lightBox = new PhotoSwipe(pswp, PhotoSwipeUI_Default, items, options);
-                lightBox.init();
+        // build static items once (folio-items without data-updatable)
+        function buildStaticItems() {
+            staticItems = [];
+            const nodes = document.querySelectorAll('.folio-item:not([data-updatable])');
+            nodes.forEach(function (node) {
+                const it = buildItemFromNode(node);
+                if (it) staticItems.push(it);
             });
+        }
 
-        });
+        // build dynamic items from DOM (folio-items with data-updatable)
+        function buildDynamicItems() {
+            dynamicItems = [];
+            const nodes = document.querySelectorAll('.folio-item[data-updatable]');
+            nodes.forEach(function (node) {
+                const it = buildItemFromNode(node);
+                if (it) dynamicItems.push(it);
+            });
+        }
 
-    };  // end ssPhotoSwipe
+        // combined items used to initialize PhotoSwipe
+        function getCombinedItems() {
+            return staticItems.concat(dynamicItems);
+        }
+
+        // open PhotoSwipe at index
+        function openAtIndex(index) {
+            const items = getCombinedItems();
+            const options = {
+                index: index,
+                showHideOpacity: true
+            };
+            const lightBox = new PhotoSwipe(pswp, PhotoSwipeUI_Default, items, options);
+            lightBox.init();
+        }
+
+        // click handler attached to each folio-item thumb (keeps original UX)
+        function attachClickHandlers() {
+            // Attach a click listener to each current folio-item thumb link.
+            // The handler computes the index from the current DOM order so dynamic changes are respected.
+            const folioItems = document.querySelectorAll(allFolioSelector);
+            folioItems.forEach(function (folioItem) {
+                const thumbLink = folioItem.querySelector('.folio-item__thumb-link');
+                if (!thumbLink) return;
+
+                // Remove any previously attached handler marker to avoid double-binding
+                if (thumbLink._pswpBound) return;
+                thumbLink._pswpBound = true;
+
+                thumbLink.addEventListener('click', function (event) {
+                    event.preventDefault();
+
+                    // Build node lists in the same order as items arrays:
+                    const staticNodes = Array.from(document.querySelectorAll('.folio-item:not([data-updatable="true"])'));
+                    const dynamicNodes = Array.from(document.querySelectorAll('.folio-item[data-updatable="true"]'));
+                    const combinedNodes = staticNodes.concat(dynamicNodes);
+
+                    // Find the clicked folio-item's index in the combined list
+                    const clickedFolio = this.closest('.folio-item');
+                    const index = combinedNodes.indexOf(clickedFolio);
+
+                    if (index === -1) return;
+
+                    // Ensure arrays are up-to-date before opening
+                    // staticItems are built once at init; dynamicItems are rebuilt here to reflect current DOM
+                    buildDynamicItems();
+
+                    openAtIndex(index);
+                });
+            });
+        }
+
+        // Public-ish refresh function (exposed globally so you can call it after DOM updates)
+        window.refreshPhotoswipeDynamicItems = function () {
+            buildDynamicItems();
+        };
+
+        // Initialize: build arrays and attach handlers
+        buildStaticItems();
+        buildDynamicItems();
+        attachClickHandlers();
+
+    };  // end ssPhotoswipe
 
 
     /* video Lightbox

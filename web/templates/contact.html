@@ -1,4 +1,19 @@
 {% extends "base.html" %}
+{% from "macros/alerts.html" import flash_alerts %}
+
+{% block navbar %}
+<nav class="s-header__nav">
+    <ul>
+        {% if current_user.is_authenticated %}
+        <li>
+            <form class="logout-form" method="POST" action="{{ url_for('logout') }}">
+                <button type="submit" class="logout">Logout</button>
+            </form>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endblock %}
 
 {% block content %}
 <section>
@@ -23,34 +38,36 @@
                     {{ form.name.label }}
                     {{ form.name(class="u-fullwidth", id="sampleInput", placeholder="Kieran Christien") }}
                     {% for e in form.name.errors %}
-                    <div class="form-error u-add-bottom">{{ e }}</div>
+                    <div class="fs-error u-add-bottom">{{ e }}</div>
                     {% endfor %}
                 </div>
                 <div>
                     {{ form.email.label }}
                     {{ form.email(class="u-fullwidth", id="sampleInput", placeholder="kieranchristien@gmail.com") }}
                     {% for e in form.email.errors %}
-                    <div class="form-error u-add-bottom">{{ e }}</div>
+                    <div class="fs-error u-add-bottom">{{ e }}</div>
                     {% endfor %}
                 </div>
                 <div class="ss-custom-select">
                     {{ form.reason.label }}
                     {{ form.reason(class="u-fullwidth ", id="sampleRecipientInput") }}
                     {% for e in form.reason.errors %}
-                    <div class="form-error u-add-bottom">{{ e }}</div>
+                    <div class="fs-error u-add-bottom">{{ e }}</div>
                     {% endfor %}
                 </div>
 
                 <label for="exampleMessage">{{ form.message.label }}</label>
                 {{ form.message(class="u-fullwidth", id="exampleMessage", placeholder="Your message") }}
                 {% for e in form.message.errors %}
-                <div class="form-error u-add-bottom">{{ e }}</div>
+                <div class="fs-error u-add-bottom">{{ e }}</div>
                 {% endfor %}
 
                 <label class="u-add-bottom">
                     {{ form.send_copy() }}
                     <span class="label-text">Send a copy to yourself</span>
                 </label>
+
+                {{ flash_alerts() }}
 
                 {{ form.submit(class="btn--primary u-fullwidth") }}
             </form>

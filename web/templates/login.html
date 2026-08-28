@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "macros/alerts.html" import flash_alerts %}
+
+{% block content %}
+<section>
+    <br>
+    <br>
+    <br>
+    <div class="row section-header section-header--dark">
+        <div class="column lg-12">
+            <h3 class="text-pretitle">Admin Login</h3>
+            <h1 class="text-display-title">
+                Log In To Your Account
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="column lg-12 tab-12">
+
+            <form method="post" novalidate>
+                {{ form.csrf_token }}
+                <div>
+                    {{ form.email.label }}
+                    {{ form.email(class="u-fullwidth", id="emailInput", placeholder="") }}
+                    {% for e in form.email.errors %}
+                    <div class="fs-error u-add-bottom">{{ e }}</div>
+                    {% endfor %}
+                </div>
+                <div>
+                    {{ form.password.label }}
+                    {{ form.password(class="u-fullwidth", id="passwordInput", placeholder="") }}
+                    {% for e in form.password.errors %}
+                    <div class="fs-error u-add-bottom">{{ e }}</div>
+                    {% endfor %}
+                </div>
+
+                {{ flash_alerts() }}
+
+                {{ form.submit(class="btn--primary u-fullwidth") }}
+            </form>
+
+        </div>
+    </div>
+</section>
+{% endblock %}

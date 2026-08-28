@@ -1,0 +1,16 @@
+{% macro flash_alerts(category=None) %}
+{% with messages = get_flashed_messages(with_categories=True) %}
+{% if messages %}
+{% for cat, msg in messages %}
+
+{% if category is none or cat == category %}
+<div class="alert-box alert-box--{{ cat }} u-add-bottom">
+    {{ msg }}
+    <span class="alert-box__close"></span>
+</div>
+{% endif %}
+
+{% endfor %}
+{% endif %}
+{% endwith %}
+{% endmacro %}
