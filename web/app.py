@@ -45,7 +45,6 @@ OWNER_PASSWORD = env.get("OWNER_PASSWORD")
 OWNER_NAME = env.get("OWNER_NAME", "Admin")
 
 app = Flask(__name__)
-app.config['RATELIMIT_STORAGE_URI'] = env.get("STORAGE_URI", "memory://")
 app.config['SECRET_KEY'] = env.get('SECRET_KEY')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 Bootstrap(app)
@@ -59,6 +58,7 @@ cloudinary.config(
 )
 
 # Configure Flask-Limiter
+app.config['RATELIMIT_STORAGE_URI'] = env.get("STORAGE_URI", "memory://")
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"],
@@ -76,8 +76,12 @@ login_manager.login_message = "Please log in to access this page."
 class Base(DeclarativeBase):
     pass
 
+DB_URI = env.get('DB_URI')
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posts.db'  # env.get('DB_URL', 'sqlite:///posts.db')
+if not DB_URI:
+    raise RuntimeError("DATABASE_URI is not configured")
+app.config['SQLALCHEMY_DATABASE_URI'] = DB_URI
+
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
