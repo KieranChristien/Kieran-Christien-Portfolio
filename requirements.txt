@@ -13,3 +13,4 @@ sqlalchemy
 werkzeug
 cloudinary
 flask-limiter
+psycopg2
