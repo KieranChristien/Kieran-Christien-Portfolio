@@ -67,6 +67,7 @@ def create_app():
     register_error_handlers(app)
 
     # Ensure owner account exists
-    ensure_owner()
+    with app.app_context():
+        ensure_owner()
 
     return app
