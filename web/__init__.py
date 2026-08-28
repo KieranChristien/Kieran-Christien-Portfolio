@@ -26,6 +26,9 @@ def create_app():
         raise RuntimeError("DATABASE_URI is not configured")
 
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    app.config["OWNER_NAME"] = env.get("OWNER_NAME")
+    app.config["OWNER_EMAIL"] = env.get("OWNER_EMAIL")
+    app.config["OWNER_PASSWORD"] = env.get("OWNER_PASSWORD")
 
     app.config['RATELIMIT_STORAGE_URI'] = env.get(
         "STORAGE_URI",
