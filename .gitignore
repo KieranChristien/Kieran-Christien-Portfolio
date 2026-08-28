@@ -308,3 +308,24 @@ http-client.private.env.json
 .idea/**/copilot.data.migration.*.xml
 
 web/templates/hidden/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Environment / secrets
+.env.*
+!.env.example
+
+# Python virtual environments
+.venv/
+
+# Local uploads / generated files
+uploads/
+media/
+
+# OS files
+.DS_Store
+Thumbs.db
