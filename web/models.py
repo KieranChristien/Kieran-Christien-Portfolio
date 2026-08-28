@@ -1,7 +1,11 @@
+from flask import current_app
 from flask_login import UserMixin
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Integer, String
+from werkzeug.security import generate_password_hash
+
 from web.extensions import db
+
 
 # Create an Admin table for all registered administrators
 class Admin(UserMixin, db.Model):
@@ -29,3 +33,26 @@ class Project(db.Model):
     thumbnail_id: Mapped[str] = mapped_column(String(2048), nullable=False)
     url_name: Mapped[str] = mapped_column(String(20), nullable=False)
     url: Mapped[str] = mapped_column(String(2048), nullable=False)
+
+
+def ensure_owner():
+    if not current_app.config["OWNER_EMAIL"]:
+        return
+
+    existing = db.session.execute(
+        db.select(Admin).where(
+            Admin.email == current_app.config["OWNER_EMAIL"]
+        )
+    ).scalar_one_or_none()
+
+    if existing:
+        return
+
+    admin = Admin(
+        email=current_app.config["OWNER_EMAIL"],
+        name=current_app.config["OWNER_NAME"],
+        password=generate_password_hash(current_app.config["OWNER_PASSWORD"], method="pbkdf2:sha256", salt_length=16),
+    )
+
+    db.session.add(admin)
+    db.session.commit()

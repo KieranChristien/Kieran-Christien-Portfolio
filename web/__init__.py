@@ -4,11 +4,11 @@ from dotenv import load_dotenv
 from flask import Flask
 from flask_bootstrap import Bootstrap
 
-from web.cli import register_cli_commands
 from web.email_form import EmailForm
 from web.errors import register_error_handlers
 from web.extensions import db, limiter, login_manager, migrate
 from web.forms import AddProjectForm, ContactForm, EditProjectForm, LoginForm, RegisterForm
+from web.models import ensure_owner
 
 
 def create_app():
@@ -61,8 +61,9 @@ def create_app():
     app.register_blueprint(projects)
 
     # Application services
-    register_cli_commands(app)
     register_error_handlers(app)
 
+    # Ensure owner account exists
+    ensure_owner()
 
     return app
