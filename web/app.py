@@ -445,7 +445,8 @@ def edit_project(project_id):
 
                 project.image = image_url
                 project.image_id = image_id
-                project.image_size = f"{width}x{height}"
+                project.width = width
+                project.height = height
 
         # Handle thumbnail change
         if form.thumbnail.data:
