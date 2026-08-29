@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/auth.html" import logout_button %}
 
 {% block navbar %}
 <nav class="s-header__nav">
@@ -7,13 +8,7 @@
         <li><a href="#services" class="smoothscroll">What I Do</a></li>
         <li><a href="#works" class="smoothscroll">My Work</a></li>
         <li><a href="#contact" class="smoothscroll">Get In Touch</a></li>
-        {% if current_user.is_authenticated %}
-        <li>
-            <form class="logout-form" method="POST" action="{{ url_for('auth.logout') }}">
-                <button type="submit" class="logout">Logout</button>
-            </form>
-        </li>
-        {% endif %}
+        {{ logout_button(current_user) }}
     </ul>
 </nav>
 {% endblock %}
