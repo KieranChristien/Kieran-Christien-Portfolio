@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 from flask import Flask
 from flask_bootstrap import Bootstrap
 
-from web.email_form import EmailForm
 from web.errors import register_error_handlers
 from web.extensions import db, limiter, login_manager, migrate
 from web.forms import AddProjectForm, ContactForm, EditProjectForm, LoginForm, RegisterForm
