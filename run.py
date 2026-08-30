@@ -6,6 +6,8 @@ from web import create_app
 load_dotenv()
 app = create_app()
 
+is_debug = os.environ.get("DEBUG", "False").lower() == "true"
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host="0.0.0.0", port=port)
+    app.run(debug=is_debug, host="0.0.0.0", port=port)
