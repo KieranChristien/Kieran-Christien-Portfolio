@@ -524,61 +524,6 @@
         }; // end ssCopyrightYear
 
 
-        /* remember scroll position
-         * ------------------------------------------------------ */
-        const ssRememberScroll = function () {
-            window.addEventListener("beforeunload", function () {
-                localStorage.setItem("scrollPosition", String(window.scrollY));
-            });
-
-            // Save current scroll position before leaving the page
-            window.addEventListener("beforeunload", function () {
-                localStorage.setItem("scrollPosition", String(window.scrollY));
-            });
-
-            // Restore saved position after everything has loaded
-            window.addEventListener("load", function () {
-                const scrollPosition = localStorage.getItem("scrollPosition");
-                if (scrollPosition === null) return;
-                const targetPosition = parseInt(scrollPosition, 10);
-                if (isNaN(targetPosition)) return;
-
-                // Wait for the preloader/layout to finish
-                setTimeout(function () {
-                    const startPosition = window.scrollY;
-                    const distance = targetPosition - startPosition;
-                    const duration = 1200;
-                    const startTime = performance.now();
-
-                    // Same easing used by MoveTo
-                    function easeInOutCubic(t) {
-                        t /= 0.5;
-                        if (t < 1) {
-                            return 0.5 * t * t * t;
-                        }
-                        t -= 2;
-                        return 0.5 * (t * t * t + 2);
-                    }
-
-                    function animateScroll(currentTime) {
-                        const elapsed = currentTime - startTime;
-                        const progress = Math.min(elapsed / duration, 1);
-                        const easedProgress = easeInOutCubic(progress);
-                        window.scrollTo(0, startPosition + (distance * easedProgress));
-                        if (progress < 1) {
-                            requestAnimationFrame(animateScroll);
-                        } else {
-                            // Only remove it once the restoration has completed
-                            localStorage.removeItem("scrollPosition");
-                        }
-                    }
-
-                    requestAnimationFrame(animateScroll);
-                }, 300);
-            });
-        }; // end ssRememberScroll
-
-
         /* Initialize
          * ------------------------------------------------------ */
         (function ssInit() {
@@ -593,7 +538,6 @@
             ssAlertBoxes();
             ssMoveTo();
             ssCopyrightYear();
-            ssRememberScroll();
 
         })();
 
