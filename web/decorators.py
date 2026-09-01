@@ -32,7 +32,16 @@ def self_or_owner_required(func):
 
     @wraps(func)
     @fresh_login_required
-    def decorated_view(admin_id, *args, **kwargs):
+    def decorated_view(*args, **kwargs):
+        admin_id = kwargs.get("admin_id")
+
+        if admin_id is None:
+            current_app.logger.error(
+                "self_or_owner_required used on a route without admin_id: %s",
+                func.__name__,
+            )
+            return current_app.login_manager.unauthorized()
+
         if current_user.id != admin_id and not current_user.is_owner:
             return current_app.login_manager.unauthorized()
 
