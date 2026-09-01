@@ -37,7 +37,7 @@ class Project(db.Model):
 
 
 def ensure_owner():
-    owner_email = current_app.config.get("OWNER_EMAIL")
+    owner_email = current_app.config.get("OWNER_EMAIL", "").lower()
     if not owner_email:
         return
 
@@ -57,8 +57,12 @@ def ensure_owner():
 
     owner = Admin(
         email=owner_email,
-        name=current_app.config.get("OWNER_NAME"),
-        password=generate_password_hash(current_app.config.get("OWNER_PASSWORD"), method="pbkdf2:sha256", salt_length=16),
+        name=current_app.config["OWNER_NAME"],
+        password=generate_password_hash(
+            current_app.config["OWNER_PASSWORD"],
+            method="pbkdf2:sha256",
+            salt_length=16
+        ),
         is_owner=True,
     )
 
