@@ -25,8 +25,16 @@ class ContactForm(FlaskForm):
     submit = SubmitField("Submit")
 
 
+# Create a form to register/edit admins
+class RegisterAdminForm(FlaskForm):
+    name = StringField("Name", validators=[DataRequired(), Length(max=100)])
+    email = StringField("Email", validators=EMAIL_VALIDATORS)
+    password = PasswordField("Password", validators=PASSWORD_VALIDATORS)
+    submit = SubmitField("Register")
+
+
 # Create a form to login existing admins
-class LoginForm(FlaskForm):
+class LoginAdminForm(FlaskForm):
     email = StringField("Email", validators=EMAIL_VALIDATORS)
     password = PasswordField("Password", validators=PASSWORD_VALIDATORS)
     submit = SubmitField("Login")
