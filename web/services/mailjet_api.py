@@ -131,7 +131,6 @@ def send_email(name: str, email: str, reason: str, message: str, send_copy: bool
 
             try:
                 response = _send_to_mailjet(client, data)
-
             except TimeoutError:
                 print(
                     f"[Mailjet] Request timed out "

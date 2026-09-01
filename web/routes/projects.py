@@ -1,7 +1,7 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, url_for
 from flask_login import current_user, fresh_login_required
 
-from web.services.cloudinary import upload_image_file, delete_image_file
+from web.services.cloudinary_api import upload_image_file, delete_image_file
 from web.extensions import db, limiter
 from web.forms import AddProjectForm, EditProjectForm
 from web.models import Project
@@ -66,6 +66,7 @@ def add():
         # Upload project image
         image_response, err = upload_image_file(form.image.data)
         if err:
+            current_app.logger.error(err)
             flash(err, "error")
             return render_template('project_editor.html', form=form)
 
@@ -85,9 +86,11 @@ def add():
             # If thumbnail upload fails, remove the previously uploaded project image
             delete_err = delete_image_file(image_id)
             if delete_err:
+                current_app.logger.error(delete_err)
                 flash(delete_err, "error")
                 return render_template('project_editor.html', form=form)
 
+            current_app.logger.error(err)
             flash(err, "error")
             return render_template('project_editor.html', form=form)
 
@@ -148,6 +151,7 @@ def edit(project_id):
         if form.image.data:
             image_response, err = upload_image_file(form.image.data)
             if err:
+                current_app.logger.error(err)
                 return flash_and_render_editor(err, "error", project, form)
 
             image_id = image_response.get("public_id", "")
@@ -159,6 +163,7 @@ def edit(project_id):
                 # Clean up old project image
                 err = delete_image_file(project.image_id)
                 if err:
+                    current_app.logger.error(err)
                     return flash_and_render_editor(err, "error", project, form)
 
                 project.image = image_url
@@ -175,6 +180,7 @@ def edit(project_id):
                 use_filename=True
             )
             if err:
+                current_app.logger.error(err)
                 return flash_and_render_editor(err, "error", project, form)
 
             thumbnail_id = thumbnail_response.get("public_id", "")
@@ -186,6 +192,7 @@ def edit(project_id):
                 # Clean up old project thumbnail
                 err = delete_image_file(project.thumbnail_id)
                 if err:
+                    current_app.logger.error(err)
                     return flash_and_render_editor(err, "error", project, form)
 
                 project.thumbnail_1x = thumb_600
@@ -215,12 +222,14 @@ def delete(project_id):
     # Clean up image
     err = delete_image_file(project.image_id)
     if err:
+        current_app.logger.error(err)
         flash(err, "error")
         return redirect(url_for('projects.edit', project_id=project_id), 303)
 
     # Clean up thumbnail
     err = delete_image_file(project.thumbnail_id)
     if err:
+        current_app.logger.error(err)
         flash(err, "error")
         return redirect(url_for('projects.edit', project_id=project_id), 303)
 

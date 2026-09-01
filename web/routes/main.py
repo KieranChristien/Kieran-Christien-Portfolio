@@ -4,7 +4,7 @@ from flask_login import current_user
 from web.extensions import db, limiter
 from web.forms import ContactForm
 from web.models import Project
-from web.services.mailjet import send_email
+from web.services.mailjet_api import send_email
 
 main = Blueprint('main', __name__)
 
