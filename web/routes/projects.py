@@ -49,7 +49,7 @@ def flash_and_render_editor(message, category, project, form, status_code=200):
     flash(message, category)
     return render_editor(project, form, status_code)
 
-@projects.route('/add-project', methods=['GET', 'POST'])
+@projects.route('/project/add', methods=['GET', 'POST'])
 @limiter.limit("10 per minute")
 @fresh_login_required
 def add():
@@ -124,7 +124,7 @@ def add():
     return render_template('project_editor.html', form=form)
 
 
-@projects.route('/edit-project/<int:project_id>', methods=['GET', 'POST'])
+@projects.route('/project/edit/<int:project_id>', methods=['GET', 'POST'])
 @limiter.limit("10 per minute")
 @fresh_login_required
 def edit(project_id):
@@ -213,7 +213,7 @@ def edit(project_id):
     return render_editor(project, form)
 
 
-@projects.route('/delete-project/<int:project_id>', methods=["POST"])
+@projects.route('/project/delete/<int:project_id>', methods=["POST"])
 @limiter.limit("10 per minute")
 @fresh_login_required
 def delete(project_id):

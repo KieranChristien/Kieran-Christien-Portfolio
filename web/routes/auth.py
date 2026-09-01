@@ -33,7 +33,7 @@ def is_safe_url(target: str) -> bool:
 
 
 # Register new admins into the Admin database
-@auth.route('/admin-register', methods=["GET", "POST"])
+@auth.route('/admin/register', methods=["GET", "POST"])
 @limiter.limit("10 per minute")
 @fresh_login_required
 @owner_required
@@ -71,7 +71,7 @@ def register():
 
 
 # Login admin
-@auth.route('/admin-login', methods=["GET", "POST"])
+@auth.route('/admin/login', methods=["GET", "POST"])
 @limiter.limit("10 per minute")
 def login():
     form = LoginForm()
@@ -106,7 +106,7 @@ def login():
     return render_template("login.html", form=form, current_user=current_user)
 
 
-@auth.route('/admin-logout', methods=["POST"])
+@auth.route('/admin/logout', methods=["POST"])
 @limiter.limit("10 per minute")
 @login_required
 def logout():
