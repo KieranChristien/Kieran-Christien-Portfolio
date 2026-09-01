@@ -40,6 +40,14 @@ class LoginAdminForm(FlaskForm):
     submit = SubmitField("Login")
 
 
+# Create a form to register/edit admins
+class EditAdminForm(FlaskForm):
+    name = StringField("Name", validators=[DataRequired(), Length(max=100)])
+    email = StringField("Email", validators=EMAIL_VALIDATORS)
+    password = PasswordField("Password", validators=PASSWORD_VALIDATORS[1:])
+    submit = SubmitField("Submit")
+
+
 # Create a form to add projects
 class AddProjectForm(FlaskForm):
     title = StringField("Title", validators=[DataRequired(), Length(max=100)])
@@ -82,11 +90,3 @@ class EditProjectForm(FlaskForm):
     url_name = StringField("URL Name", validators=[DataRequired(), Length(max=20)])
     url = URLField("URL", validators=LINK_VALIDATORS)
     submit = SubmitField("Submit")
-
-
-# Create a form to register new admins
-class RegisterForm(FlaskForm):
-    name = StringField("Name", validators=[DataRequired(), Length(max=100)])
-    email = StringField("Email", validators=EMAIL_VALIDATORS)
-    password = PasswordField("Password", validators=PASSWORD_VALIDATORS)
-    submit = SubmitField("Register")

@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% from "macros/alerts.html" import flash_alerts %}
+{% from "macros/auth.html" import logout_button %}
+
+{% block navbar %}
+<nav class="s-header__nav">
+    <ul>
+        {{ logout_button(current_user) }}
+    </ul>
+</nav>
+{% endblock %}
+
+{% block content %}
+<section>
+    <br>
+    <br>
+    <br>
+    <div class="row section-header section-header--dark">
+        <div class="column lg-12">
+            <h3 class="text-pretitle">
+                {{ 'Admin Editor' if is_edit else 'Admin Registration' }}
+            </h3>
+            <h1 class="text-display-title">
+                {{ ('Editing ' ~ admin.name) if is_edit else 'Register A New Admin' }}
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="column lg-12 tab-12">
+            <form method="post" novalidate>
+                {{ form.csrf_token }}
+                <div>
+                    {{ form.name.label }}
+                    {{ form.name(class="u-fullwidth", id="nameInput", placeholder="Kieran Christien") }}
+                    {% for e in form.name.errors %}
+                    <div class="fs-error u-add-bottom">{{ e }}</div>
+                    {% endfor %}
+                </div>
+                <div>
+                    {{ form.email.label }}
+                    {{ form.email(class="u-fullwidth", id="emailInput", placeholder="admin@kieran-christien-dev.com") }}
+                    {% for e in form.email.errors %}
+                    <div class="fs-error u-add-bottom">{{ e }}</div>
+                    {% endfor %}
+                </div>
+                <div>
+                    {{ form.password.label }}
+                    {{ form.password(class="u-fullwidth", id="passwordInput", placeholder="") }}
+                    {% for e in form.password.errors %}
+                    <div class="fs-error u-add-bottom">{{ e }}</div>
+                    {% endfor %}
+                </div>
+
+                {{ flash_alerts() }}
+
+                {{ form.submit(class="btn--primary u-fullwidth") }}
+            </form>
+
+            {% if is_edit %}
+            <!-- Delete trigger (button) -->
+            <button type="button" id="deleteButton" class="btn u-fullwidth"
+                    aria-controls="confirmDelete" aria-expanded="false">
+                Delete
+            </button>
+
+            <!-- Confirm block (hidden by default) -->
+            <div id="confirmDelete" hidden>
+                <span>Are you sure you want to delete "<strong>{{ form.name.data }}</strong>"?</span>
+
+                <!-- POST form for deletion (CSRF token included) -->
+                <form id="confirmDeleteForm" method="post"
+                      action="{{ url_for('auth.delete', admin_id=admin.id) }}">
+                    {{ form.csrf_token }}
+                    <div>
+                        <button type="submit" id="confirmDeleteBtn" class="btn u-fullwidth">Confirm Delete
+                        </button>
+                    </div>
+                    <div>
+                        <button type="button" id="cancelDelete" class="btn u-fullwidth">Cancel</button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</section>
+
+<script>
+    /* Attach listeners for text inputs and initialise previews */
+    document.addEventListener('DOMContentLoaded', () => {
+        (function attachDeleteConfirm() {
+            const deleteBtn = document.getElementById('deleteButton');
+            const confirmBlock = document.getElementById('confirmDelete');
+            const confirmLink = document.getElementById('confirmDeleteLink'); // may be an <a> or a button inside a form
+            const cancelBtn = document.getElementById('cancelDelete');
+
+            if (!deleteBtn || !confirmBlock) return;
+
+            // Ensure accessible attributes exist
+            deleteBtn.setAttribute('role', 'button');
+            deleteBtn.setAttribute('aria-controls', 'confirmDelete');
+            deleteBtn.setAttribute('aria-expanded', 'false');
+
+            // Show the confirm block when Delete is clicked
+            deleteBtn.addEventListener('click', (ev) => {
+                // If it's an <a>, prevent navigation
+                if (ev && typeof ev.preventDefault === 'function') ev.preventDefault();
+
+                // Reveal the confirmation block
+                confirmBlock.hidden = false;
+                deleteBtn.setAttribute('aria-expanded', 'true');
+
+                // If your animation system needs a trigger, call it
+                try {
+                    refreshPhotoswipe();
+                } catch (e) { /* ignore */
+                }
+
+                // Focus the Confirm control for keyboard users
+                if (confirmLink) {
+                    // If confirmLink is an anchor, focus it; if it's a button inside a form, focus that
+                    confirmLink.focus();
+                }
+            });
+
+            // Cancel hides the confirm block and returns focus
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    confirmBlock.hidden = true;
+                    deleteBtn.setAttribute('aria-expanded', 'false');
+                    deleteBtn.focus();
+                });
+            }
+
+            // If Confirm is an anchor that performs a GET, mark it disabled after click to avoid double actions.
+            // Prefer converting Confirm into a POST form; this code is defensive for anchors.
+            if (confirmLink) {
+                confirmLink.addEventListener('click', (ev) => {
+                    // Allow navigation to proceed, but prevent accidental double clicks
+                    try {
+                        confirmLink.setAttribute('aria-disabled', 'true');
+                        confirmLink.classList.add('is-disabled'); // optional styling hook
+                    } catch (e) { /* ignore */
+                    }
+                    // If you want to prevent navigation and submit a POST instead, replace this anchor with a form.
+                });
+            }
+
+            // Close confirm block on Escape
+            document.addEventListener('keydown', (ev) => {
+                if (ev.key === 'Escape' && !confirmBlock.hidden) {
+                    confirmBlock.hidden = true;
+                    deleteBtn.setAttribute('aria-expanded', 'false');
+                    deleteBtn.focus();
+                }
+            });
+
+            // If confirmLink is a form submit button inside a form, disable it on submit to avoid duplicates
+            if (confirmLink) {
+                // If confirmLink is inside a form, find the form and attach submit handler
+                const parentForm = confirmLink.closest && confirmLink.closest('form');
+                if (parentForm) {
+                    parentForm.addEventListener('submit', () => {
+                        const submitBtn = parentForm.querySelector('button[type="submit"], input[type="submit"]');
+                        if (submitBtn) {
+                            submitBtn.disabled = true;
+                            // Provide immediate feedback
+                            if (submitBtn.tagName === 'BUTTON') submitBtn.textContent = 'Deleting…';
+                        }
+                    });
+                }
+            }
+        })();
+    });
+</script>
+
+{% endblock %}
