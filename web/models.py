@@ -55,16 +55,15 @@ def ensure_owner():
         db.session.commit()
         return
 
-    owner = Admin(
-        email=owner_email,
-        name=current_app.config["OWNER_NAME"],
-        password=generate_password_hash(
-            current_app.config["OWNER_PASSWORD"],
-            method="pbkdf2:sha256",
-            salt_length=16
-        ),
-        is_owner=True,
+    owner = Admin()
+    owner.email = owner_email
+    owner.name = current_app.config["OWNER_NAME"]
+    owner.password = generate_password_hash(
+        current_app.config["OWNER_PASSWORD"],
+        method="pbkdf2:sha256",
+        salt_length=16
     )
+    owner.is_owner = True
 
     db.session.add(owner)
     db.session.commit()

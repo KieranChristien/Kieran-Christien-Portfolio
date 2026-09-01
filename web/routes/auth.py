@@ -54,11 +54,11 @@ def register():
             method='pbkdf2:sha256',
             salt_length=16
         )
-        new_admin = Admin(
-            email=form.email.data,
-            name=form.name.data,
-            password=hash_and_salted_password,
-        )
+        new_admin = Admin()
+        new_admin.email=form.email.data
+        new_admin.name=form.name.data
+        new_admin.password=hash_and_salted_password
+
         db.session.add(new_admin)
         db.session.commit()
 
