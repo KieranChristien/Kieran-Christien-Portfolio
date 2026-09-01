@@ -3,10 +3,11 @@ import os
 from dotenv import load_dotenv
 from flask import Flask
 from flask_bootstrap import Bootstrap
+from flask_migrate import upgrade
 
 from web.errors import register_error_handlers
 from web.extensions import db, limiter, login_manager, migrate
-from web.forms import AddProjectForm, ContactForm, EditProjectForm, LoginForm, RegisterForm
+from web.forms import AddProjectForm, ContactForm, EditProjectForm, LoginAdminForm, RegisterAdminForm
 from web.models import ensure_owner
 
 
@@ -67,6 +68,7 @@ def create_app():
 
     # Ensure owner account exists
     with app.app_context():
+        upgrade()
         ensure_owner()
 
     return app
