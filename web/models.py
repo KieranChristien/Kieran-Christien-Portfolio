@@ -37,7 +37,7 @@ class Project(db.Model):
 
 
 def ensure_owner():
-    owner_email = current_app.config.get("OWNER_EMAIL", "").lower()
+    owner_email = current_app.config.get("OWNER_EMAIL", "").strip().lower()
     if not owner_email:
         return
 
