@@ -14,7 +14,7 @@ class Admin(UserMixin, db.Model):
     email: Mapped[str] = mapped_column(String(254), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(String(256), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    is_owner: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    is_owner: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 # Create a Project table for recent projects
@@ -48,10 +48,11 @@ def ensure_owner():
     ).scalar_one_or_none()
 
     if existing_owner:
-        if not existing_owner.is_owner:
-            existing_owner.is_owner = True
-            db.session.commit()
+        if existing_owner.is_owner:
+            return
 
+        existing_owner.is_owner = True
+        db.session.commit()
         return
 
     owner = Admin(
