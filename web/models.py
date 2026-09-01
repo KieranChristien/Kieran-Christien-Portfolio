@@ -37,26 +37,27 @@ class Project(db.Model):
 
 
 def ensure_owner():
-    if not current_app.config["OWNER_EMAIL"]:
+    owner_email = current_app.config.get("OWNER_EMAIL")
+    if not owner_email:
         return
 
     existing_owner = db.session.execute(
         db.select(Admin).where(
-            Admin.email == current_app.config["OWNER_EMAIL"]
+            Admin.email == owner_email
         )
     ).scalar_one_or_none()
 
     if existing_owner:
         if not existing_owner.is_owner:
             existing_owner.is_owner = True
+            db.session.commit()
 
-        db.session.commit()
         return
 
     owner = Admin(
-        email=current_app.config["OWNER_EMAIL"],
-        name=current_app.config["OWNER_NAME"],
-        password=generate_password_hash(current_app.config["OWNER_PASSWORD"], method="pbkdf2:sha256", salt_length=16),
+        email=owner_email,
+        name=current_app.config.get("OWNER_NAME"),
+        password=generate_password_hash(current_app.config.get("OWNER_PASSWORD"), method="pbkdf2:sha256", salt_length=16),
         is_owner=True,
     )
 
