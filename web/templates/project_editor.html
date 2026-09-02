@@ -32,12 +32,12 @@
             <div class="folio-item" data-updatable>
                 <div class="folio-item__thumb">
                     <a class="folio-item__thumb-link"
-                       href="{{ project_image or url_for('static', filename='images/portfolio/gallery/g-tulips.jpg') }}"
+                       href="{{ project.image if project else url_for('static', filename='images/portfolio/gallery/g-tulips.jpg') }}"
                        title="{{ form.title.data }}"
-                       data-size="{{ (project_image_width ~ 'x' ~ project_image_height) if project_image_width and project_image_height else '1050x700' }}"
+                       data-size="{{ (project.image_width ~ 'x' ~ project.image_height) if project else '1050x700' }}"
                        id="imagePreview">
-                        <img src="{{ project_thumbnail_1x or url_for('static', filename='images/portfolio/tulips.jpg') }}"
-                             srcset="{{ project_thumbnail_1x or url_for('static', filename='images/portfolio/tulips.jpg') }} 1x, {{ project_thumbnail_2x or url_for('static', filename='images/portfolio/tulips@2x.jpg') }} 2x"
+                        <img src="{{ project.thumbnail_1x if project else url_for('static', filename='images/portfolio/tulips.jpg') }}"
+                             srcset="{{ project.thumbnail_1x if project else url_for('static', filename='images/portfolio/tulips.jpg') }} 1x, {{ project.thumbnail_2x if project else url_for('static', filename='images/portfolio/tulips@2x.jpg') }} 2x"
                              alt="{{ form.thumbnail_alt.data }}"
                              id="thumbnailPreview">
                     </a>
@@ -127,7 +127,7 @@
                 {{ form.submit(class="btn--primary u-fullwidth") }}
             </form>
 
-            {% if is_edit %}
+            {% if is_edit and project %}
             <!-- Delete trigger (button) -->
             <button type="button" id="deleteButton" class="btn u-fullwidth"
                     aria-controls="confirmDelete" aria-expanded="false">
@@ -140,7 +140,7 @@
 
                 <!-- POST form for deletion (CSRF token included) -->
                 <form id="confirmDeleteForm" method="post"
-                      action="{{ url_for('projects.delete', project_id=project_id) }}">
+                      action="{{ url_for('projects.delete', project_id=project.id) }}">
                     {{ form.csrf_token }}
                     <div>
                         <button type="submit" id="confirmDeleteBtn" class="btn u-fullwidth">Confirm Delete

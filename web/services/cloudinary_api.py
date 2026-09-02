@@ -1,19 +1,21 @@
 import random
 import time
+from flask import current_app
+from typing import Any
+
 from cloudinary import uploader
 from cloudinary.exceptions import AlreadyExists, AuthorizationRequired, BadRequest, GeneralError, NotAllowed, \
     NotFound, RateLimited
 from werkzeug.datastructures import FileStorage
 
 # Retry Configuration
-MAX_RETRIES = 2
+MAX_ATTEMPTS = 3
 CLOUDINARY_TIMEOUT = 3
 BASE_BACKOFF = 0.5
 MAX_BACKOFF = 2.0
 
 
-def _backoff(attempt: int) -> float:
-    """Exponential backoff with a small amount of jitter."""
+def _backoff(attempt: int) -> None:
     delay = min(
         BASE_BACKOFF * (2 ** attempt),
         MAX_BACKOFF,
@@ -21,10 +23,12 @@ def _backoff(attempt: int) -> float:
 
     delay += random.uniform(0, delay * 0.25)
 
-    print(f"[Cloudinary] Retrying in {delay:.2f}s...")
+    current_app.logger.info("[Cloudinary] Retrying in %.2fs...", delay)
     time.sleep(delay)
 
-    return delay
+
+def _can_retry(attempt: int) -> bool:
+    return attempt < MAX_ATTEMPTS - 1
 
 
 def _delete_from_cloudinary(image_id: str):
@@ -37,7 +41,7 @@ def _upload_to_cloudinary(file_storage: FileStorage, **kwargs):
 
 def upload_image_file(file_storage: FileStorage, folder="portfolio/projects", eager=None, eager_async=False,
                       use_filename=True) -> \
-        tuple[dict, None] | tuple[None, str]:
+        tuple[dict[str, Any], None] | tuple[None, str]:
     """
     Upload wrapper: returns (response, error_message)\n
     On success: (response_dict, None)\n
@@ -56,37 +60,46 @@ def upload_image_file(file_storage: FileStorage, folder="portfolio/projects", ea
     if eager is not None:
         kwargs.update({"eager": eager, "eager_async": eager_async})
 
-    for attempt in range(MAX_RETRIES + 1):
+    for attempt in range(MAX_ATTEMPTS):
         file_storage.stream.seek(0)
         attempt_number = attempt + 1
 
-        print(
-            f"[Cloudinary] Uploading image "
-            f"(attempt {attempt_number}/{MAX_RETRIES + 1})..."
+        current_app.logger.info(
+            "[Cloudinary] Uploading image "
+            "(attempt %s/%s)...",
+            attempt_number,
+            MAX_ATTEMPTS,
         )
 
         try:
-            return _upload_to_cloudinary(file_storage, **kwargs), None
+            response = _upload_to_cloudinary(file_storage, **kwargs)
+            current_app.logger.info("[Cloudinary] Image uploaded successfully.")
+            return response, None
         except TimeoutError:
-            print(
-                f"[Cloudinary] Request timed out "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1})."
+            current_app.logger.exception(
+                "[Cloudinary] Request timed out "
+                "(attempt %s/%s).",
+                attempt_number,
+                MAX_ATTEMPTS,
             )
 
-            if attempt >= MAX_RETRIES:
-                print("[Cloudinary] Maximum retries reached.")
-                return None, (
-                    "Cloudinary timed out while uploading the image. "
-                    "Please try again later."
-                )
+            if _can_retry(attempt):
+                _backoff(attempt)
+                continue
 
-            _backoff(attempt)
-            continue
+            current_app.logger.error("[Cloudinary] Maximum retries reached.")
+            return None, (
+                "Cloudinary timed out while uploading the image. "
+                "Please try again later."
+            )
 
         except AuthorizationRequired as e:
-            print(
-                f"[Cloudinary] Authorization error "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1}): {e}"
+            current_app.logger.exception(
+                "[Cloudinary] Authorization error "
+                "(attempt %s/%s): %s",
+                attempt_number,
+                MAX_ATTEMPTS,
+                e
             )
 
             return None, (
@@ -95,75 +108,91 @@ def upload_image_file(file_storage: FileStorage, folder="portfolio/projects", ea
             )
 
         except AlreadyExists as e:
-            print(
-                f"[Cloudinary] Already exists error "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1}): {e}"
+            current_app.logger.exception(
+                "[Cloudinary] Already exists error "
+                "(attempt %s/%s): %s",
+                attempt_number,
+                MAX_ATTEMPTS,
+                e
             )
 
             return None, "Could not upload image that already exists."
 
         except BadRequest as e:
-            print(
-                f"[Cloudinary] Bad request error "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1}): {e}"
+            current_app.logger.exception(
+                "[Cloudinary] Bad request error "
+                "(attempt %s/%s): %s",
+                attempt_number,
+                MAX_ATTEMPTS,
+                e
             )
 
             return None, "Cloudinary rejected the image."
 
         except GeneralError as e:
-            print(
-                f"[Cloudinary] Connection/API error "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1}): {e}"
+            current_app.logger.exception(
+                "[Cloudinary] Connection/API error "
+                "(attempt %s/%s): %s",
+                attempt_number,
+                MAX_ATTEMPTS,
+                e
             )
 
-            if attempt >= MAX_RETRIES:
-                print("[Cloudinary] Maximum retries reached.")
-                return None, (
-                    "Could not connect to the upload service. "
-                    "Please try again later."
-                )
+            if _can_retry(attempt):
+                _backoff(attempt)
+                continue
 
-            _backoff(attempt)
-            continue
+            current_app.logger.error("[Cloudinary] Maximum retries reached.")
+            return None, (
+                "Could not connect to the upload service. "
+                "Please try again later."
+            )
 
         except NotAllowed as e:
-            print(
-                f"[Cloudinary] Request not allowed "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1}): {e}"
+            current_app.logger.exception(
+                "[Cloudinary] Request not allowed "
+                "(attempt %s/%s): %s",
+                attempt_number,
+                MAX_ATTEMPTS,
+                e
             )
 
             return None, "Not permitted to upload image."
 
         except NotFound as e:
-            print(
-                f"[Cloudinary] Resource not found "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1}): {e}"
+            current_app.logger.exception(
+                "[Cloudinary] Resource not found "
+                "(attempt %s/%s): %s",
+                attempt_number,
+                MAX_ATTEMPTS,
+                e
             )
 
             return None, "The requested Cloudinary resource was not found."
 
         except RateLimited as e:
-            print(
-                f"[Cloudinary] Rate limited (429) "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1}): {e}"
+            current_app.logger.exception(
+                "[Cloudinary] Rate limited (429) "
+                "(attempt %s/%s): %s",
+                attempt_number,
+                MAX_ATTEMPTS,
+                e
             )
 
-            if attempt >= MAX_RETRIES:
-                print("[Cloudinary] Maximum retries reached.")
-                return None, (
-                    "The upload service is temporarily rate limited. "
-                    "Please try again later."
-                )
+            if _can_retry(attempt):
+                _backoff(attempt)
+                continue
 
-            _backoff(attempt)
-            continue
-        finally:
-            print("[Cloudinary] Image uploaded successfully.")
+            current_app.logger.error("[Cloudinary] Maximum retries reached.")
+            return None, (
+                "The upload service is temporarily rate limited. "
+                "Please try again later."
+            )
 
     return None, "Unable to upload image."
 
 
-def delete_image_file(image_id) -> str | None:
+def delete_image_file(image_id: str | None) -> str | None:
     """
     Delete wrapper: error_message\n
     On success: None\n
@@ -172,37 +201,45 @@ def delete_image_file(image_id) -> str | None:
     if not image_id:
         return "No image ID provided."
 
-    for attempt in range(MAX_RETRIES + 1):
+    for attempt in range(MAX_ATTEMPTS):
         attempt_number = attempt + 1
 
-        print(
-            f"[Cloudinary] Deleting image "
-            f"(attempt {attempt_number}/{MAX_RETRIES + 1})..."
+        current_app.logger.info(
+            "[Cloudinary] Deleting image "
+            "(attempt %s/%s)...",
+            attempt_number,
+            MAX_ATTEMPTS,
         )
 
         try:
             _delete_from_cloudinary(image_id)
+            current_app.logger.info("[Cloudinary] Image deleted successfully.")
             return None
         except TimeoutError:
-            print(
-                f"[Cloudinary] Request timed out "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1})."
+            current_app.logger.exception(
+                "[Cloudinary] Request timed out "
+                "(attempt %s/%s).",
+                attempt_number,
+                MAX_ATTEMPTS,
             )
 
-            if attempt >= MAX_RETRIES:
-                print("[Cloudinary] Maximum retries reached.")
-                return (
-                    "Cloudinary timed out while deleting the image. "
-                    "Please try again later."
-                )
+            if _can_retry(attempt):
+                _backoff(attempt)
+                continue
 
-            _backoff(attempt)
-            continue
+            current_app.logger.error("[Cloudinary] Maximum retries reached.")
+            return (
+                "Cloudinary timed out while deleting the image. "
+                "Please try again later."
+            )
 
         except AuthorizationRequired as e:
-            print(
-                f"[Cloudinary] Authorization error "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1}): {e}"
+            current_app.logger.exception(
+                "[Cloudinary] Authorization error "
+                "(attempt %s/%s): %s",
+                attempt_number,
+                MAX_ATTEMPTS,
+                e
             )
 
             return (
@@ -211,61 +248,74 @@ def delete_image_file(image_id) -> str | None:
             )
 
         except BadRequest as e:
-            print(
-                f"[Cloudinary] Bad request error "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1}): {e}"
+            current_app.logger.exception(
+                "[Cloudinary] Bad request error "
+                "(attempt %s/%s): %s",
+                attempt_number,
+                MAX_ATTEMPTS,
+                e
             )
 
             return "Cloudinary rejected the delete request."
 
         except GeneralError as e:
-            print(
-                f"[Cloudinary] Connection/API error "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1}): {e}"
+            current_app.logger.exception(
+                "[Cloudinary] Connection/API error "
+                "(attempt %s/%s): %s",
+                attempt_number,
+                MAX_ATTEMPTS,
+                e
             )
 
-            if attempt >= MAX_RETRIES:
-                print("[Cloudinary] Maximum retries reached.")
-                return (
-                    "Could not connect to the delete service. "
-                    "Please try again later."
-                )
+            if _can_retry(attempt):
+                _backoff(attempt)
+                continue
 
-            _backoff(attempt)
-            continue
+            current_app.logger.error("[Cloudinary] Maximum retries reached.")
+            return (
+                "Could not connect to the delete service. "
+                "Please try again later."
+            )
 
         except NotAllowed as e:
-            print(
-                f"[Cloudinary] Request not allowed "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1}): {e}"
+            current_app.logger.exception(
+                "[Cloudinary] Request not allowed "
+                "(attempt %s/%s): %s",
+                attempt_number,
+                MAX_ATTEMPTS,
+                e
             )
 
             return "Not permitted to delete image."
 
         except NotFound as e:
-            print(
-                f"[Cloudinary] Resource not found "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1}): {e}"
+            current_app.logger.exception(
+                "[Cloudinary] Resource already deleted "
+                "(attempt %s/%s): %s",
+                attempt_number,
+                MAX_ATTEMPTS,
+                e
             )
 
-            return "The requested Cloudinary resource was not found."
+            return None
 
         except RateLimited as e:
-            print(
-                f"[Cloudinary] Rate limited (429) "
-                f"(attempt {attempt_number}/{MAX_RETRIES + 1}): {e}"
+            current_app.logger.exception(
+                "[Cloudinary] Rate limited (429) "
+                "(attempt %s/%s): %s",
+                attempt_number,
+                MAX_ATTEMPTS,
+                e
             )
 
-            if attempt >= MAX_RETRIES:
-                print("[Cloudinary] Maximum retries reached.")
-                return (
-                    "The delete service is temporarily rate limited. "
-                    "Please try again later."
-                )
+            if _can_retry(attempt):
+                _backoff(attempt)
+                continue
 
-            _backoff(attempt)
-            continue
-        finally:
-            print("[Cloudinary] Image deleted successfully.")
+            current_app.logger.error("[Cloudinary] Maximum retries reached.")
+            return (
+                "The delete service is temporarily rate limited. "
+                "Please try again later."
+            )
 
     return "Unable to delete image."

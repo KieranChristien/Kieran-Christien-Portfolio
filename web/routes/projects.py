@@ -1,5 +1,6 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, url_for
 from flask_login import current_user, fresh_login_required
+from sqlalchemy.exc import IntegrityError
 
 from web.services.cloudinary_api import upload_image_file, delete_image_file
 from web.extensions import db, limiter
@@ -27,27 +28,39 @@ THUMBNAIL_TRANSFORMS = [
 
 projects = Blueprint('projects', __name__)
 
-def _editor_context(project, form, is_edit=True):
+
+def _cleanup_assets(*public_ids: str | None) -> None:
+    for public_id in public_ids:
+        if not public_id:
+            continue
+
+        err = delete_image_file(public_id)
+        if err:
+            current_app.logger.error(
+                "Failed to delete Cloudinary asset %s: %s",
+                public_id,
+                err,
+            )
+
+
+def _editor_context(form, project: Project | None, is_edit=True) -> dict:
     return {
-        "project_id": getattr(project, "id", None),
-        "project_image": getattr(project, "image", None),
-        "project_image_width": getattr(project, "image_width", None),
-        "project_image_height": getattr(project, "image_height", None),
-        "project_thumbnail_1x": getattr(project, "thumbnail_1x", None),
-        "project_thumbnail_2x": getattr(project, "thumbnail_2x", None),
         "form": form,
+        "project": project,
         "is_edit": is_edit,
     }
 
 
-def render_editor(project, form, status_code=200):
-    ctx = _editor_context(project, form, is_edit=True)
+def render_editor(form, project: Project | None = None, is_edit=False, status_code=200) -> tuple[str, int]:
+    ctx = _editor_context(form=form, project=project, is_edit=is_edit)
     return render_template("project_editor.html", **ctx), status_code
 
 
-def flash_and_render_editor(message, category, project, form, status_code=200):
+def flash_and_render_editor(message, category, form, project: Project | None = None, is_edit=False, status_code=200) -> \
+        tuple[str, int]:
     flash(message, category)
-    return render_editor(project, form, status_code)
+    return render_editor(form=form, project=project, is_edit=is_edit, status_code=status_code)
+
 
 @projects.route('/project/add', methods=['GET', 'POST'])
 @limiter.limit("10 per minute")
@@ -59,47 +72,64 @@ def add():
         thumbnail_file = form.thumbnail.data
 
         # Validate image files
-        if not (image_file or thumbnail_file):
-            flash("Please select an image and thumbnail file.", "error")
-            return render_template('project_editor.html', form=form)
+        if not all((image_file, thumbnail_file)):
+            return flash_and_render_editor(
+                "Please select an image and thumbnail file.",
+                "error",
+                form
+            )
 
         # Upload project image
         image_response, err = upload_image_file(form.image.data)
         if err:
             current_app.logger.error(err)
-            flash(err, "error")
-            return render_template('project_editor.html', form=form)
+            return flash_and_render_editor(err, "error", form)
 
-        image_id = image_response.get("public_id", "")
-        image_url = image_response.get("secure_url", "")
-        width = image_response.get("width", "")
-        height = image_response.get("height", "")
+        image_id: str = image_response.get("public_id", "")
+        image_url: str = image_response.get("secure_url", "")
+        width: int = image_response.get("width", -1)
+        height: int = image_response.get("height", -1)
+
+        if not all((image_url, image_id)) or width < 0 or height < 0:
+            current_app.logger.error("Cloudinary returned incomplete image data.")
+
+            _cleanup_assets(image_id)
+
+            return flash_and_render_editor(
+                "Unable to process uploaded image. Please try again.",
+                "error",
+                form,
+            )
 
         # Upload project thumbnail
         thumbnail_response, err = upload_image_file(
             form.thumbnail.data,
             eager=THUMBNAIL_TRANSFORMS,
-            eager_async=True,
             use_filename=True
         )
         if err:
             # If thumbnail upload fails, remove the previously uploaded project image
-            delete_err = delete_image_file(image_id)
-            if delete_err:
-                current_app.logger.error(delete_err)
-                flash(delete_err, "error")
-                return render_template('project_editor.html', form=form)
+            _cleanup_assets(image_id)
 
             current_app.logger.error(err)
-            flash(err, "error")
-            return render_template('project_editor.html', form=form)
+            return flash_and_render_editor(err, "error", form)
 
-        thumbnail_id = thumbnail_response.get("public_id")
-        eager_response = thumbnail_response.get("eager")
-        thumb_600 = eager_response[0].get("secure_url") if len(eager_response) > 0 else None
-        thumb_1200 = eager_response[1].get("secure_url") if len(eager_response) > 1 else None
+        thumbnail_id: str = thumbnail_response.get("public_id", "")
+        eager_response = thumbnail_response.get("eager", [])
+        thumb_600: str = eager_response[0].get("secure_url", "") if len(eager_response) > 0 else ""
+        thumb_1200: str = eager_response[1].get("secure_url", "") if len(eager_response) > 1 else ""
+        if not all((thumbnail_id, thumb_600, thumb_1200)):
+            current_app.logger.error("Cloudinary returned incomplete thumbnail data.")
 
-        project = Project(
+            _cleanup_assets(image_id, thumbnail_id)
+
+            return flash_and_render_editor(
+                "Unable to process uploaded thumbnail. Please try again.",
+                "error",
+                form,
+            )
+
+        new_project = Project(
             title=form.title.data,
             category=form.category.data,
             caption=form.caption.data,
@@ -115,13 +145,27 @@ def add():
             url=form.url.data,
         )
 
-        db.session.add(project)
-        db.session.commit()
+        db.session.add(new_project)
 
-        current_app.logger.info("Admin %s created project %s", current_user.name, project.title)
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+
+            _cleanup_assets(image_id, thumbnail_id)
+
+            return flash_and_render_editor(
+                "Unable to add project. Please try again.",
+                "error",
+                form,
+                new_project,
+                status_code=409
+            )
+
+        current_app.logger.info("Admin %s created project %s", current_user.name, new_project.title)
         return redirect(url_for('main.home'), 303)
 
-    return render_template('project_editor.html', form=form)
+    return render_editor(form)
 
 
 @projects.route('/project/edit/<int:project_id>', methods=['GET', 'POST'])
@@ -141,63 +185,93 @@ def edit(project_id):
     if form.validate_on_submit():
         # Check if anything was changed
         fields = ["title", "category", "caption", "thumbnail_alt", "url_name", "url"]
-        changed = any(
-            getattr(project, f) != getattr(form, f).data for f in fields) or form.image.data or form.thumbnail.data
+        has_changed = (
+                any(
+                    getattr(project, f) != getattr(form, f).data for f in fields
+                )
+                or bool(form.image.data)
+                or bool(form.thumbnail.data)
+        )
 
-        if not changed:
-            return flash_and_render_editor("No changes made.", "error", project, form)
+        if not has_changed:
+            return flash_and_render_editor("No changes made.", "error", form, project, True)
 
         # Handle image change
+        image_id: str | None = None
+        old_image_id: str | None = None
         if form.image.data:
             image_response, err = upload_image_file(form.image.data)
             if err:
                 current_app.logger.error(err)
-                return flash_and_render_editor(err, "error", project, form)
+                return flash_and_render_editor(err, "error", form, project, True)
 
-            image_id = image_response.get("public_id", "")
-            image_url = image_response.get("secure_url", "")
-            width = image_response.get("width", "")
-            height = image_response.get("height", "")
+            image_id: str = image_response.get("public_id", "")
+            image_url: str = image_response.get("secure_url", "")
+            width: int = image_response.get("width", -1)
+            height: int = image_response.get("height", -1)
 
-            if image_url and image_id and width and height:
-                # Clean up old project image
-                err = delete_image_file(project.image_id)
-                if err:
-                    current_app.logger.error(err)
-                    return flash_and_render_editor(err, "error", project, form)
+            if not all((image_url, image_id)) or width < 0 or height < 0:
+                current_app.logger.error(
+                    "Cloudinary returned incomplete image data for project %s.",
+                    project_id,
+                )
 
-                project.image = image_url
-                project.image_id = image_id
-                project.width = width
-                project.height = height
+                _cleanup_assets(image_id)
+
+                return flash_and_render_editor(
+                    "Unable to process uploaded image. Please try again.",
+                    "error",
+                    form,
+                    project,
+                    True
+                )
+
+            old_image_id = project.image_id
+            project.image = image_url
+            project.image_id = image_id
+            project.image_width = width
+            project.image_height = height
 
         # Handle thumbnail change
+        thumbnail_id: str | None = None
+        old_thumbnail_id: str | None = None
         if form.thumbnail.data:
             thumbnail_response, err = upload_image_file(
                 form.thumbnail.data,
                 eager=THUMBNAIL_TRANSFORMS,
-                eager_async=True,
                 use_filename=True
             )
             if err:
+                _cleanup_assets(image_id)
+
                 current_app.logger.error(err)
-                return flash_and_render_editor(err, "error", project, form)
+                return flash_and_render_editor(err, "error", form, project, True)
 
-            thumbnail_id = thumbnail_response.get("public_id", "")
+            thumbnail_id: str = thumbnail_response.get("public_id", "")
             eager_response = thumbnail_response.get("eager", [])
-            thumb_600 = eager_response[0].get("secure_url") if len(eager_response) > 0 else ""
-            thumb_1200 = eager_response[1].get("secure_url") if len(eager_response) > 1 else ""
+            thumb_600: str = eager_response[0].get("secure_url", "") if len(eager_response) > 0 else ""
+            thumb_1200: str = eager_response[1].get("secure_url", "") if len(eager_response) > 1 else ""
 
-            if thumb_600 and thumb_1200 and thumbnail_id:
-                # Clean up old project thumbnail
-                err = delete_image_file(project.thumbnail_id)
-                if err:
-                    current_app.logger.error(err)
-                    return flash_and_render_editor(err, "error", project, form)
+            if not all((thumb_600, thumb_1200, thumbnail_id)):
+                current_app.logger.error(
+                    "Cloudinary returned incomplete thumbnail data for project %s.",
+                    project_id,
+                )
 
-                project.thumbnail_1x = thumb_600
-                project.thumbnail_2x = thumb_1200
-                project.thumbnail_id = thumbnail_id
+                _cleanup_assets(image_id, thumbnail_id)
+
+                return flash_and_render_editor(
+                    "Unable to process uploaded thumbnail. Please try again.",
+                    "error",
+                    form,
+                    project,
+                    True
+                )
+
+            old_thumbnail_id = project.thumbnail_id
+            project.thumbnail_1x = thumb_600
+            project.thumbnail_2x = thumb_1200
+            project.thumbnail_id = thumbnail_id
 
         project.title = form.title.data
         project.category = form.category.data
@@ -206,11 +280,31 @@ def edit(project_id):
         project.url_name = form.url_name.data
         project.url = form.url.data
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+
+            # Clean up new orphaned assets
+            _cleanup_assets(image_id, thumbnail_id)
+
+            current_app.logger.exception("Failed to edit project %s.", project_id)
+            return flash_and_render_editor(
+                "Unable to save changes. Please try again.",
+                "error",
+                form,
+                project,
+                True,
+                409,
+            )
+
+        # Clean up old orphaned assets
+        _cleanup_assets(old_image_id, old_thumbnail_id)
+
         current_app.logger.info("Admin %s edited project %s", current_user.name, project.title)
         return redirect(url_for('main.home'), 303)
 
-    return render_editor(project, form)
+    return render_editor(form, project, True)
 
 
 @projects.route('/project/delete/<int:project_id>', methods=["POST"])
@@ -218,24 +312,22 @@ def edit(project_id):
 @fresh_login_required
 def delete(project_id):
     project = db.get_or_404(Project, project_id)
-
-    # Clean up image
-    err = delete_image_file(project.image_id)
-    if err:
-        current_app.logger.error(err)
-        flash(err, "error")
-        return redirect(url_for('projects.edit', project_id=project_id), 303)
-
-    # Clean up thumbnail
-    err = delete_image_file(project.thumbnail_id)
-    if err:
-        current_app.logger.error(err)
-        flash(err, "error")
-        return redirect(url_for('projects.edit', project_id=project_id), 303)
+    title = project.title
+    image_id = project.image_id
+    thumbnail_id = project.thumbnail_id
 
     # Commit to deletion
     db.session.delete(project)
-    db.session.commit()
 
-    current_app.logger.info("Admin %s deleted project %s", current_user.name, project.title)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+
+        current_app.logger.exception("Failed to delete project %s.", project_id)
+        return redirect(url_for('projects.edit', project_id=project_id), 409)
+
+    _cleanup_assets(image_id, thumbnail_id)
+
+    current_app.logger.info("Admin %s deleted project %s", current_user.name, title)
     return redirect(url_for('main.home'))
