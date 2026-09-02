@@ -28,14 +28,14 @@ class ContactForm(FlaskForm):
 # Create a form to register/edit admins
 class RegisterAdminForm(FlaskForm):
     name = StringField("Name", validators=[DataRequired(), Length(max=100)])
-    email = StringField("Email", validators=EMAIL_VALIDATORS)
+    email = EmailField("Email", validators=EMAIL_VALIDATORS)
     password = PasswordField("Password", validators=PASSWORD_VALIDATORS)
     submit = SubmitField("Register")
 
 
 # Create a form to login existing admins
 class LoginAdminForm(FlaskForm):
-    email = StringField("Email", validators=EMAIL_VALIDATORS)
+    email = EmailField("Email", validators=EMAIL_VALIDATORS)
     password = PasswordField("Password", validators=PASSWORD_VALIDATORS)
     submit = SubmitField("Login")
 
@@ -43,7 +43,7 @@ class LoginAdminForm(FlaskForm):
 # Create a form to register/edit admins
 class EditAdminForm(FlaskForm):
     name = StringField("Name", validators=[DataRequired(), Length(max=100)])
-    email = StringField("Email", validators=EMAIL_VALIDATORS)
+    email = EmailField("Email", validators=EMAIL_VALIDATORS)
     password = PasswordField("Password", validators=PASSWORD_VALIDATORS[1:])
     submit = SubmitField("Submit")
 
