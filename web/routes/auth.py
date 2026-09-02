@@ -1,8 +1,7 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_user, login_required, logout_user, fresh_login_required
-from urllib.parse import urljoin, urlparse
-
+from flask_login import current_user, login_user, login_required, logout_user
 from sqlalchemy.exc import IntegrityError
+from urllib.parse import urljoin, urlparse
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from web.decorators import owner_required, self_or_owner_required
