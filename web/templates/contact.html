@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% from "macros/alerts.html" import flash_alerts %}
-{% from "macros/auth.html" import logout_button %}
+{% from "macros/auth.html" import admin_nav %}
+{% from "macros/form.html" import render_field %}
 
 {% block navbar %}
 <nav class="s-header__nav">
     <ul>
-        {{ logout_button(current_user) }}
+        {{ admin_nav(current_user) }}
     </ul>
 </nav>
 {% endblock %}
@@ -27,40 +28,18 @@
     <div class="row">
         <div class="column lg-12 tab-12">
 
-            <form method="post" novalidate>
+            <form method="post" novalidate data-live-validation>
                 {{ form.csrf_token }}
-                <div>
-                    {{ form.name.label }}
-                    {{ form.name(class="u-fullwidth", id="sampleInput", placeholder="Kieran Christien") }}
-                    {% for e in form.name.errors %}
-                    <div class="fs-error u-add-bottom">{{ e }}</div>
-                    {% endfor %}
-                </div>
-                <div>
-                    {{ form.email.label }}
-                    {{ form.email(class="u-fullwidth", id="sampleInput", placeholder="kieranchristien@gmail.com") }}
-                    {% for e in form.email.errors %}
-                    <div class="fs-error u-add-bottom">{{ e }}</div>
-                    {% endfor %}
-                </div>
-                <div class="ss-custom-select">
-                    {{ form.reason.label }}
-                    {{ form.reason(class="u-fullwidth ", id="sampleRecipientInput") }}
-                    {% for e in form.reason.errors %}
-                    <div class="fs-error u-add-bottom">{{ e }}</div>
-                    {% endfor %}
-                </div>
 
-                <label for="exampleMessage">{{ form.message.label }}</label>
-                {{ form.message(class="u-fullwidth", id="exampleMessage", placeholder="Your message") }}
-                {% for e in form.message.errors %}
-                <div class="fs-error u-add-bottom">{{ e }}</div>
-                {% endfor %}
+                {{ render_field(form.name, class="u-fullwidth", placeholder="Kieran Christien") }}
 
-                <label class="u-add-bottom">
-                    {{ form.send_copy() }}
-                    <span class="label-text">Send a copy to yourself</span>
-                </label>
+                {{ render_field(form.email, class="u-fullwidth", placeholder="kieranchristien@gmail.com") }}
+
+                {{ render_field(form.reason, class="u-fullwidth", div_class="ss-custom-select") }}
+
+                {{ render_field(form.message, class="u-fullwidth", placeholder="Your message") }}
+
+                {{ render_field(form.send_copy, class='u-add-bottom') }}
 
                 {{ flash_alerts() }}
 

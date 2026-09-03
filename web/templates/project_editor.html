@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% from "macros/alerts.html" import flash_alerts %}
-{% from "macros/auth.html" import logout_button %}
+{% from "macros/auth.html" import admin_nav %}
+{% from "macros/form.html" import render_field %}
 
 {% block navbar %}
 <nav class="s-header__nav">
     <ul>
-        {{ logout_button(current_user) }}
+        {{ admin_nav(current_user) }}
     </ul>
 </nav>
 {% endblock %}
@@ -47,7 +48,7 @@
                     <h4 class="folio-item__title" id="titlePreview">{{ form.title.data }}</h4>
                 </div>
                 <a href="{{ form.url.data }}" title="{{ form.url_name.data }}" class="folio-item__project-link"
-                   id="linkPreview">
+                   id="urlPreview">
                     <span id="namePreview">{{ form.url_name.data }}</span>
                 </a>
                 <div class="folio-item__caption">
@@ -63,64 +64,24 @@
     <div class="row">
         <div class="column lg-12 tab-12">
 
-            <form method="post" enctype="multipart/form-data" novalidate>
+            <form method="post" enctype="multipart/form-data" novalidate data-live-validation>
                 {{ form.csrf_token }}
-                <div>
-                    {{ form.title.label }}
-                    {{ form.title(class="u-fullwidth", id="titleInput") }}
-                    {% for e in form.title.errors %}
-                    <div class="u-add-bottom fs-error">{{ e }}</div>
-                    {% endfor %}
-                </div>
-                <div class="ss-custom-select">
-                    {{ form.category.label }}
-                    {{ form.category(class="u-fullwidth ", id="categoryInput") }}
-                    {% for e in form.category.errors %}
-                    <div class="u-add-bottom fs-error">{{ e }}</div>
-                    {% endfor %}
-                </div>
-                <div>
-                    {{ form.caption.label }}
-                    {{ form.caption(class="u-fullwidth", id="captionInput") }}
-                    {% for e in form.caption.errors %}
-                    <div class="u-add-bottom fs-error">{{ e }}</div>
-                    {% endfor %}
-                </div>
-                <div>
-                    {{ form.thumbnail.label }}
-                    {{ form.thumbnail(class="u-fullwidth", id="thumbnailInput", accept="image/*") }}
-                    {% for e in form.thumbnail.errors %}
-                    <div class="u-add-bottom fs-error">{{ e }}</div>
-                    {% endfor %}
-                </div>
-                <div>
-                    {{ form.image.label }}
-                    {{ form.image(class="u-fullwidth", id="imageInput", accept="image/*") }}
-                    {% for e in form.image.errors %}
-                    <div class="u-add-bottom fs-error">{{ e }}</div>
-                    {% endfor %}
-                </div>
-                <div>
-                    {{ form.thumbnail_alt.label }}
-                    {{ form.thumbnail_alt(class="u-fullwidth", id="thumbnailAltInput") }}
-                    {% for e in form.thumbnail_alt.errors %}
-                    <div class="u-add-bottom fs-error">{{ e }}</div>
-                    {% endfor %}
-                </div>
-                <div>
-                    {{ form.url_name.label }}
-                    {{ form.url_name(class="u-fullwidth", id="nameInput") }}
-                    {% for e in form.url_name.errors %}
-                    <div class="u-add-bottom fs-error">{{ e }}</div>
-                    {% endfor %}
-                </div>
-                <div>
-                    {{ form.url.label }}
-                    {{ form.url(class="u-fullwidth", id="linkInput") }}
-                    {% for e in form.url.errors %}
-                    <div class="u-add-bottom fs-error">{{ e }}</div>
-                    {% endfor %}
-                </div>
+
+                {{ render_field(form.title, class="u-fullwidth") }}
+
+                {{ render_field(form.category, class="u-fullwidth", div_class="ss-custom-select") }}
+
+                {{ render_field(form.caption, class="u-fullwidth") }}
+
+                {{ render_field(form.thumbnail, class="u-fullwidth") }}
+
+                {{ render_field(form.image, class="u-fullwidth") }}
+
+                {{ render_field(form.thumbnail_alt, class="u-fullwidth") }}
+
+                {{ render_field(form.url_name, class="u-fullwidth") }}
+
+                {{ render_field(form.url, class="u-fullwidth") }}
 
                 {{ flash_alerts() }}
 
@@ -239,15 +200,15 @@
             }
         },
         {
-            input: '#nameInput', update: el => {
+            input: '#url_nameInput', update: el => {
                 document.getElementById('namePreview').textContent = el.value || 'Project Link';
-                document.getElementById('linkPreview').title = el.value || 'Project Link';
+                document.getElementById('urlPreview').title = el.value || 'Project Link';
                 refreshPhotoswipe();
             }
         },
         {
-            input: '#linkInput', update: el => {
-                const a = document.getElementById('linkPreview');
+            input: '#urlInput', update: el => {
+                const a = document.getElementById('urlPreview');
                 a.href = el.value || '#';
                 if (!el.value) a.classList.add('disabled'); else a.classList.remove('disabled');
                 refreshPhotoswipe();
@@ -330,39 +291,21 @@
         (function attachDeleteConfirm() {
             const deleteBtn = document.getElementById('deleteButton');
             const confirmBlock = document.getElementById('confirmDelete');
-            const confirmLink = document.getElementById('confirmDeleteLink'); // may be an <a> or a button inside a form
+            const confirmForm = document.getElementById('confirmDeleteForm');
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
             const cancelBtn = document.getElementById('cancelDelete');
 
             if (!deleteBtn || !confirmBlock) return;
 
-            // Ensure accessible attributes exist
-            deleteBtn.setAttribute('role', 'button');
-            deleteBtn.setAttribute('aria-controls', 'confirmDelete');
-            deleteBtn.setAttribute('aria-expanded', 'false');
-
-            // Show the confirm block when Delete is clicked
-            deleteBtn.addEventListener('click', (ev) => {
-                // If it's an <a>, prevent navigation
-                if (ev && typeof ev.preventDefault === 'function') ev.preventDefault();
-
-                // Reveal the confirmation block
+            deleteBtn.addEventListener('click', () => {
                 confirmBlock.hidden = false;
                 deleteBtn.setAttribute('aria-expanded', 'true');
 
-                // If your animation system needs a trigger, call it
-                try {
-                    refreshPhotoswipe();
-                } catch (e) { /* ignore */
-                }
-
-                // Focus the Confirm control for keyboard users
-                if (confirmLink) {
-                    // If confirmLink is an anchor, focus it; if it's a button inside a form, focus that
-                    confirmLink.focus();
+                if (confirmBtn) {
+                    confirmBtn.focus();
                 }
             });
 
-            // Cancel hides the confirm block and returns focus
             if (cancelBtn) {
                 cancelBtn.addEventListener('click', () => {
                     confirmBlock.hidden = true;
@@ -371,44 +314,20 @@
                 });
             }
 
-            // If Confirm is an anchor that performs a GET, mark it disabled after click to avoid double actions.
-            // Prefer converting Confirm into a POST form; this code is defensive for anchors.
-            if (confirmLink) {
-                confirmLink.addEventListener('click', (ev) => {
-                    // Allow navigation to proceed, but prevent accidental double clicks
-                    try {
-                        confirmLink.setAttribute('aria-disabled', 'true');
-                        confirmLink.classList.add('is-disabled'); // optional styling hook
-                    } catch (e) { /* ignore */
-                    }
-                    // If you want to prevent navigation and submit a POST instead, replace this anchor with a form.
+            if (confirmForm && confirmBtn) {
+                confirmForm.addEventListener('submit', () => {
+                    confirmBtn.disabled = true;
+                    confirmBtn.textContent = 'Deleting…';
                 });
             }
 
-            // Close confirm block on Escape
-            document.addEventListener('keydown', (ev) => {
-                if (ev.key === 'Escape' && !confirmBlock.hidden) {
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && !confirmBlock.hidden) {
                     confirmBlock.hidden = true;
                     deleteBtn.setAttribute('aria-expanded', 'false');
                     deleteBtn.focus();
                 }
             });
-
-            // If confirmLink is a form submit button inside a form, disable it on submit to avoid duplicates
-            if (confirmLink) {
-                // If confirmLink is inside a form, find the form and attach submit handler
-                const parentForm = confirmLink.closest && confirmLink.closest('form');
-                if (parentForm) {
-                    parentForm.addEventListener('submit', () => {
-                        const submitBtn = parentForm.querySelector('button[type="submit"], input[type="submit"]');
-                        if (submitBtn) {
-                            submitBtn.disabled = true;
-                            // Provide immediate feedback
-                            if (submitBtn.tagName === 'BUTTON') submitBtn.textContent = 'Deleting…';
-                        }
-                    });
-                }
-            }
         })();
     });
 </script>

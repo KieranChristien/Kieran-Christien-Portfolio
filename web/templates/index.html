@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/auth.html" import logout_button %}
+{% from "macros/auth.html" import admin_nav %}
 
 {% block navbar %}
 <nav class="s-header__nav">
@@ -8,7 +8,7 @@
         <li><a href="#services" class="smoothscroll">What I Do</a></li>
         <li><a href="#works" class="smoothscroll">My Work</a></li>
         <li><a href="#contact" class="smoothscroll">Get In Touch</a></li>
-        {{ logout_button(current_user) }}
+        {{ admin_nav(current_user) }}
     </ul>
 </nav>
 {% endblock %}

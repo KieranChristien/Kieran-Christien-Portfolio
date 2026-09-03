@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "macros/alerts.html" import flash_alerts %}
+{% from "macros/form.html" import render_field %}
+
+{% block content %}
+<section>
+    <br>
+    <br>
+    <br>
+    <div class="row section-header section-header--dark">
+        <div class="column lg-12">
+            <h3 class="text-pretitle">Admin Login</h3>
+            <h1 class="text-display-title">
+                Log In To Your Account
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="column lg-12 tab-12">
+
+            <form method="post" novalidate data-live-validation>
+                {{ form.csrf_token }}
+
+                {{ render_field(form.email, class="u-fullwidth") }}
+
+                {{ render_field(form.password, class="u-fullwidth") }}
+
+                {{ flash_alerts() }}
+
+                {{ form.submit(class="btn--primary u-fullwidth") }}
+            </form>
+
+        </div>
+    </div>
+</section>
+{% endblock %}

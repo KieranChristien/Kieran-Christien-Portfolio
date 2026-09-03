@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% from "macros/alerts.html" import flash_alerts %}
+{% from "macros/auth.html" import admin_nav %}
+
+{% block navbar %}
+<nav class="s-header__nav">
+    <ul>
+        {{ admin_nav(current_user) }}
+    </ul>
+</nav>
+{% endblock %}
+
+{% block content %}
+<section>
+    <br>
+    <br>
+    <br>
+    <div class="row section-header section-header--dark">
+        <div class="column lg-12">
+            <h3 class="text-pretitle">
+                Administrators
+            </h3>
+            <h1 class="text-display-title">
+                Welcome {{ current_user.name }}
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="column lg-12 tab-12">
+            <div class="table-responsive">
+
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for admin in admins %}
+                    <tr>
+                        <td>{{ admin.name }}</td>
+                        <td>{{ admin.email }}</td>
+                        <td>
+                            {% if current_user.id == admin.id or current_user.is_owner %}
+                            <a href="{{ url_for('auth.edit', admin_id=admin.id) }}">EDIT</a>
+                            {% else %}
+                            EDIT
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {{ flash_alerts() }}
+        </div>
+
+        {% if current_user.is_owner %}
+        <div class="column lg-12 tab-12">
+            <a class="btn btn--primary u-fullwidth" href="{{ url_for('auth.register') }}">
+                Register Admin
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="column lg-12 tab-12">
+            <form method="POST" action="{{ url_for('auth.logout') }}">
+                <button type="submit" class="btn u-fullwidth">Logout</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

@@ -167,13 +167,9 @@
             event.ctrlKey &&
             event.shiftKey
         ) {
-            if (event.key.toLowerCase() === "l") {
+            if (event.key.toLowerCase() === "a") {
                 event.preventDefault();
-                window.location.href = "{{ url_for('auth.login') }}";
-            }
-            if (event.key.toLowerCase() === "r") {
-                event.preventDefault();
-                window.location.href = "{{ url_for('auth.register') }}";
+                window.location.href = "{{ url_for('auth.administration') }}";
             }
         }
 

@@ -1,5 +1,5 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_user, login_required, logout_user
+from flask_login import current_user, login_user, login_required, logout_user, fresh_login_required
 from sqlalchemy.exc import IntegrityError
 from urllib.parse import urljoin, urlparse
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -15,7 +15,7 @@ auth = Blueprint('auth', __name__)
 @login_manager.user_loader
 def load_user(user_id):
     try:
-        uid = int(user_id)
+        uid: int = int(user_id)
     except (TypeError, ValueError):
         return None
     return db.session.get(Admin, uid)
@@ -33,19 +33,20 @@ def is_safe_url(target: str) -> bool:
     return target_url.scheme in ("http", "https") and host_url.netloc == target_url.netloc
 
 
-def render_editor(admin, form, status_code=200):
+def render_editor(form, admin: Admin | None = None, is_edit: bool = False, status_code=200) -> tuple[str, int]:
     return render_template(
-        "admin_editor.html",
+        "auth/admin_editor.html",
         admin=admin,
         form=form,
         current_user=current_user,
-        is_edit=True
+        is_edit=is_edit
     ), status_code
 
 
-def flash_and_render_editor(message, category, admin, form, status_code=200):
+def flash_and_render_editor(message: str, category: str, form, admin: Admin | None = None, is_edit: bool = False,
+                            status_code=200) -> tuple[str, int]:
     flash(message, category)
-    return render_editor(admin, form, status_code)
+    return render_editor(form=form, admin=admin, is_edit=is_edit, status_code=status_code)
 
 
 # Register new admins into the Admin database
@@ -57,8 +58,8 @@ def register():
     if form.validate_on_submit():
         # Check if admin email is already present in the database.
         email = form.email.data.strip().lower()
-        admin = db.session.execute(db.select(Admin).where(Admin.email == email)).scalar_one_or_none()
-        if admin:
+        existing_admin = db.session.execute(db.select(Admin).where(Admin.email == email)).scalar_one_or_none()
+        if existing_admin:
             # Admin already exists
             current_app.logger.info("Sign up attempt for existing email %s. Redirecting to login page.", email)
             flash("You've already signed up with that email, log in instead!", "info")
@@ -82,15 +83,16 @@ def register():
             db.session.rollback()
 
             current_app.logger.exception("Failed to register admin %s.", new_admin.email)
-            flash("Unable to register. Please try again.","error")
-            return render_template("admin_editor.html", form=form, current_user=current_user), 409
+            return flash_and_render_editor(
+                "Unable to register. Please try again.",
+                "error",
+                form,
+                status_code=409
+            )
 
-        # This line will authenticate the admin with Flask-Login
-        login_user(new_admin)
-
-        current_app.logger.info("Admin %s signed up.", new_admin.name)
-        return redirect(url_for("main.home"), 303)
-    return render_template("admin_editor.html", form=form, current_user=current_user)
+        current_app.logger.info("Admin %s registered by %s.", new_admin.name, current_user.name)
+        return redirect(url_for("auth.administration"), 303)
+    return render_editor(form)
 
 
 # Edit existing admin's details
@@ -98,39 +100,47 @@ def register():
 @limiter.limit("10 per minute")
 @self_or_owner_required
 def edit(admin_id):
-    admin = db.get_or_404(Admin, admin_id)
+    current_admin = db.get_or_404(Admin, admin_id)
     form = EditAdminForm(
-        name=admin.name,
-        email=admin.email,
+        name=current_admin.name,
+        email=current_admin.email,
     )
+
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
-        has_changes = form.name.data != admin.name or email != admin.email or bool(form.password.data)
+        has_changes = form.name.data != current_admin.name or email != current_admin.email or bool(form.password.data)
 
         if not has_changes:
-            return flash_and_render_editor("No changes made.", "error", admin, form)
+            return flash_and_render_editor(
+                "No changes made.",
+                "error",
+                form,
+                current_admin,
+                True
+            )
 
-        if form.name.data != admin.name:
-            admin.name = form.name.data
+        if form.name.data != current_admin.name:
+            current_admin.name = form.name.data
 
-        if email != admin.email:
+        if email != current_admin.email:
             existing_email = db.session.execute(db.select(Admin).where(
                 Admin.email == email,
-                Admin.id != admin.id,
+                Admin.id != current_admin.id,
             )).scalar_one_or_none()
 
             if existing_email:
                 return flash_and_render_editor(
                     "That email address is already in use.",
                     "error",
-                    admin,
-                    form
+                    form,
+                    current_admin,
+                    True,
                 )
 
-            admin.email = email
+            current_admin.email = email
 
         if form.password.data:
-            admin.password = generate_password_hash(
+            current_admin.password = generate_password_hash(
                 form.password.data,
                 method='pbkdf2:sha256',
                 salt_length=16
@@ -145,14 +155,15 @@ def edit(admin_id):
             return flash_and_render_editor(
                 "Unable to save your changes. Please try again.",
                 "error",
-                admin,
                 form,
+                current_admin,
+                True,
                 409
             )
 
-        current_app.logger.info(f"Admin %s edited %s's account.", current_user.name, admin.name)
-        return redirect(url_for("main.home"), 303)
-    return render_editor(admin, form)
+        current_app.logger.info("Admin %s edited %s's account.", current_user.name, current_admin.name)
+        return redirect(url_for("auth.administration"), 303)
+    return render_editor(form, current_admin, True)
 
 
 # Delete existing admin
@@ -176,12 +187,12 @@ def delete(admin_id):
             flash("Cannot delete only existing owner account.", "error")
             return redirect(url_for("auth.edit", admin_id=admin_id))
 
-    admin = db.get_or_404(Admin, admin_id)
+    current_admin = db.get_or_404(Admin, admin_id)
 
     actor_name = current_user.name
-    target_name = admin.name
+    target_name = current_admin.name
 
-    db.session.delete(admin)
+    db.session.delete(current_admin)
     try:
         db.session.commit()
     except IntegrityError:
@@ -199,7 +210,7 @@ def delete(admin_id):
         logout_user()
 
     current_app.logger.info("Admin %s deleted %s's account.", actor_name, target_name)
-    return redirect(url_for('main.home'))
+    return redirect(url_for('auth.administration'))
 
 
 # Login admin
@@ -210,26 +221,26 @@ def login():
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
         password = form.password.data
-        admin = db.session.execute(db.select(Admin).where(Admin.email == email)).scalar_one_or_none()
+        admin_to_login = db.session.execute(db.select(Admin).where(Admin.email == email)).scalar_one_or_none()
 
         # Email doesn't exist or password incorrect
-        if not admin or not check_password_hash(admin.password, password):
+        if not admin_to_login or not check_password_hash(admin_to_login.password, password):
             current_app.logger.info("Failed login attempt for %s.", email)
             flash("Email or password incorrect, please try again.", "error")
-            return render_template("login.html", form=form, current_user=current_user)
+            return render_template("auth/login.html", form=form, current_user=current_user)
 
-        login_user(admin)
+        login_user(admin_to_login)
 
         # Get the page the user was trying to access
         next_page = request.args.get('next', '')
 
         if not next_page or not is_safe_url(next_page):
-            next_page = url_for('main.home')
+            next_page = url_for('auth.administration')
 
-        current_app.logger.info("%s logged in.", admin.name)
+        current_app.logger.info("%s logged in.", admin_to_login.name)
         return redirect(next_page, 303)
 
-    return render_template("login.html", form=form, current_user=current_user)
+    return render_template("auth/login.html", form=form, current_user=current_user)
 
 
 @auth.route('/admin/logout', methods=["POST"])
@@ -239,3 +250,11 @@ def logout():
     current_app.logger.info("%s logged out.", current_user.name)
     logout_user()
     return redirect(url_for('main.home'), 303)
+
+
+@auth.route('/admin')
+@fresh_login_required
+def administration():
+    admins = db.session.execute(db.select(Admin)).scalars().all()
+
+    return render_template("auth/admin.html", admins=admins, current_user=current_user)

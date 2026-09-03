@@ -524,6 +524,159 @@
         }; // end ssCopyrightYear
 
 
+        /* real time form validation
+         * ------------------------------------------------------ */
+        const ssFormValidation = function () {
+            document.addEventListener('DOMContentLoaded', () => {
+                const forms = document.querySelectorAll('form[data-live-validation]');
+
+                if (!forms.length) return;
+
+                forms.forEach((form) => {
+                    const fields = form.querySelectorAll(
+                        'input:not([type="hidden"]):not([type="submit"]):not([type="button"]), select, textarea'
+                    );
+
+                    function getErrorElement(field) {
+                        return document.getElementById(`${field.id}ClientError`);
+                    }
+
+                    function validateFile(field) {
+                        if (field.type !== 'file') return true;
+
+                        const file = field.files[0];
+
+                        // Required file
+                        if (!file) {
+                            field.setCustomValidity(
+                                field.required ? (field.dataset.msgRequired || '') : ''
+
+                            );
+
+                            return field.checkValidity();
+                        }
+
+                        // Maximum file size
+                        const maxSize = Number(field.dataset.maxSizeBytes);
+
+                        if (maxSize > -1 && file.size > maxSize) {
+                            field.setCustomValidity(
+                                field.dataset.msgFileTooLarge || ''
+                            );
+
+                            return false;
+                        }
+
+                        // Allowed file extension
+                        const accept = field.getAttribute('accept');
+
+                        if (accept) {
+                            const extension = file.name
+                                .split('.')
+                                .pop()
+                                .toLowerCase();
+
+                            const allowedExtensions = accept
+                                .split(',')
+                                .map((value) => value.trim().toLowerCase().replace('.', ''));
+
+                            if (!allowedExtensions.includes(extension)) {
+                                field.setCustomValidity(
+                                    field.dataset.msgInvalidFile || ''
+                                );
+
+                                return false;
+                            }
+                        }
+
+                        field.setCustomValidity('');
+                        return true;
+                    }
+
+                    function getValidationMessage(field) {
+                        if (field.required && field.validity.valueMissing) {
+                            return field.dataset.msgRequired || 'This field is required.';
+                        }
+
+                        if (field.validity.tooShort) {
+                            return field.dataset.msgTooShort || 'Please check this field.';
+                        }
+
+                        if (field.validity.tooLong) {
+                            return field.dataset.msgTooLong || 'Please check this field.';
+                        }
+
+                        if (field.validity.typeMismatch) {
+                            return field.dataset.msgTypeMismatch || 'Please enter a valid value.';
+                        }
+
+                        if (field.type === 'file') {
+                            return field.validationMessage || 'Please check this field.';
+                        }
+
+                        return 'Please check this field.';
+                    }
+
+                    function validateField(field) {
+                        const errorElement = getErrorElement(field);
+
+                        if (!errorElement) return true;
+
+                        validateFile(field);
+
+                        if (field.checkValidity()) {
+                            errorElement.hidden = true;
+                            errorElement.textContent = '';
+                            field.removeAttribute('aria-invalid');
+                            return true;
+                        }
+
+                        errorElement.textContent = getValidationMessage(field);
+                        errorElement.hidden = false;
+                        field.setAttribute('aria-invalid', 'true');
+
+                        return false;
+                    }
+
+                    fields.forEach((field) => {
+                        field.addEventListener('blur', () => {
+                            field.dataset.touched = 'true';
+                            validateField(field);
+                        });
+
+                        field.addEventListener('input', () => {
+                            if (field.dataset.touched === 'true') {
+                                validateField(field);
+                            }
+                        });
+
+                        // File inputs fire change when a file is selected.
+                        if (field.type === 'file') {
+                            field.addEventListener('change', () => {
+                                field.dataset.touched = 'true';
+                                validateField(field);
+                            });
+                        }
+                    });
+
+                    form.addEventListener('submit', (event) => {
+                        let valid = true;
+
+                        fields.forEach((field) => {
+                            if (!validateField(field)) {
+                                valid = false;
+                            }
+                        });
+
+                        if (!valid) {
+                            event.preventDefault();
+                        }
+                    });
+                });
+            });
+        }; // end ssFormValidation
+
+
         /* Initialize
          * ------------------------------------------------------ */
         (function ssInit() {
@@ -538,6 +691,7 @@
             ssAlertBoxes();
             ssMoveTo();
             ssCopyrightYear();
+            ssFormValidation();
 
         })();
 

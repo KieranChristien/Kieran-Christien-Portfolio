@@ -1,9 +1,9 @@
-{% macro logout_button(current_user=None) %}
+{% macro admin_nav(current_user=None) %}
 {% if current_user and current_user.is_authenticated %}
 <li>
-    <form class="logout-form" method="POST" action="{{ url_for('auth.logout') }}">
-        <button type="submit" class="logout">Logout</button>
-    </form>
+    <a href="{{ url_for('auth.administration') }}">
+        Administration
+    </a>
 </li>
 {% endif %}
 {% endmacro %}

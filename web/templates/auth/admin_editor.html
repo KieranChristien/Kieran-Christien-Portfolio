@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% from "macros/alerts.html" import flash_alerts %}
+{% from "macros/auth.html" import admin_nav %}
+{% from "macros/form.html" import render_field %}
+
+{% block navbar %}
+<nav class="s-header__nav">
+    <ul>
+        {{ admin_nav(current_user) }}
+    </ul>
+</nav>
+{% endblock %}
+
+{% block content %}
+<section>
+    <br>
+    <br>
+    <br>
+    <div class="row section-header section-header--dark">
+        <div class="column lg-12">
+            <h3 class="text-pretitle">
+                {{ 'Admin Editor' if is_edit else 'Admin Registration' }}
+            </h3>
+            <h1 class="text-display-title">
+                {{ ('Editing ' ~ admin.name) if is_edit and admin else 'Register A New Admin' }}
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="column lg-12 tab-12">
+            <form method="post" novalidate data-live-validation>
+                {{ form.csrf_token }}
+
+                {{ render_field(form.name, class="u-fullwidth", placeholder="Kieran Christien") }}
+
+                {{ render_field(form.email, class="u-fullwidth", placeholder="admin@kieran-christien-dev.com") }}
+
+                {{ render_field(form.password, class="u-fullwidth") }}
+
+                {{ flash_alerts() }}
+
+                {{ form.submit(class="btn--primary u-fullwidth") }}
+            </form>
+
+            {% if is_edit and admin %}
+            <!-- Delete trigger (button) -->
+            <button type="button" id="deleteButton" class="btn u-fullwidth"
+                    aria-controls="confirmDelete" aria-expanded="false">
+                Delete
+            </button>
+
+            <!-- Confirm block (hidden by default) -->
+            <div id="confirmDelete" hidden>
+                <span>Are you sure you want to delete "<strong>{{ admin.name }}</strong>"?</span>
+
+                <!-- POST form for deletion (CSRF token included) -->
+                <form id="confirmDeleteForm" method="post"
+                      action="{{ url_for('auth.delete', admin_id=admin.id) }}">
+                    {{ form.csrf_token }}
+                    <div>
+                        <button type="submit" id="confirmDeleteBtn" class="btn u-fullwidth">Confirm Delete
+                        </button>
+                    </div>
+                    <div>
+                        <button type="button" id="cancelDelete" class="btn u-fullwidth">Cancel</button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const deleteBtn = document.getElementById('deleteButton');
+        const confirmBlock = document.getElementById('confirmDelete');
+        const confirmForm = document.getElementById('confirmDeleteForm');
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        const cancelBtn = document.getElementById('cancelDelete');
+
+        if (!deleteBtn || !confirmBlock) return;
+
+        deleteBtn.addEventListener('click', () => {
+            confirmBlock.hidden = false;
+            deleteBtn.setAttribute('aria-expanded', 'true');
+
+            if (confirmBtn) {
+                confirmBtn.focus();
+            }
+        });
+
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                confirmBlock.hidden = true;
+                deleteBtn.setAttribute('aria-expanded', 'false');
+                deleteBtn.focus();
+            });
+        }
+
+        if (confirmForm && confirmBtn) {
+            confirmForm.addEventListener('submit', () => {
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = 'Deleting…';
+            });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !confirmBlock.hidden) {
+                confirmBlock.hidden = true;
+                deleteBtn.setAttribute('aria-expanded', 'false');
+                deleteBtn.focus();
+            }
+        });
+    });
+</script>
+
+{% endblock %}

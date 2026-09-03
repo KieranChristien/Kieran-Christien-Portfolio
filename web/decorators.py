@@ -1,6 +1,8 @@
-from flask import current_app
+from flask import current_app, flash, redirect, url_for
 from flask_login import current_user, fresh_login_required
 from functools import wraps
+
+from web.extensions import login_manager
 
 
 def owner_required(func):
@@ -15,7 +17,8 @@ def owner_required(func):
     @fresh_login_required
     def decorated_view(*args, **kwargs):
         if not current_user.is_owner:
-            return current_app.login_manager.unauthorized()
+            flash("Only owners can access this page.", "error")
+            return redirect(url_for("auth.administration"), 303)
 
         return func(*args, **kwargs)
 
@@ -40,10 +43,11 @@ def self_or_owner_required(func):
                 "self_or_owner_required used on a route without admin_id: %s",
                 func.__name__,
             )
-            return current_app.login_manager.unauthorized()
+            return login_manager.unauthorized()
 
         if current_user.id != admin_id and not current_user.is_owner:
-            return current_app.login_manager.unauthorized()
+            flash("Cannot access account that isn't yours.", "error")
+            return redirect(url_for("auth.administration"), 303)
 
         return func(*args, **kwargs)
 

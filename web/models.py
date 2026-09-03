@@ -30,7 +30,7 @@ class Project(db.Model):
     image_height: Mapped[int] = mapped_column(Integer, nullable=False)
     thumbnail_1x: Mapped[str] = mapped_column(String(2048), nullable=False)
     thumbnail_2x: Mapped[str] = mapped_column(String(2048), nullable=False)
-    thumbnail_alt: Mapped[str] = mapped_column(String(100), nullable=False)
+    thumbnail_alt: Mapped[str] = mapped_column(String(150), nullable=False)
     thumbnail_id: Mapped[str] = mapped_column(String(2048), nullable=False)
     url_name: Mapped[str] = mapped_column(String(20), nullable=False)
     url: Mapped[str] = mapped_column(String(2048), nullable=False)

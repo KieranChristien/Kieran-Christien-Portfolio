@@ -45,6 +45,7 @@ def create_app():
     # Flask-Login configuration
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Please log in to access this page."
+    login_manager.login_message_category = "notice"
 
     # Cloudinary configuration
     cloudinary.config(

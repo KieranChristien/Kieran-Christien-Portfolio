@@ -20,6 +20,11 @@ def home():
     )
 
 
+@main.route('/styles')
+def styles():
+    return render_template('hidden/styles.html')
+
+
 @main.route('/contact', methods=['GET', 'POST'])
 @limiter.limit("10 per minute")
 def contact():

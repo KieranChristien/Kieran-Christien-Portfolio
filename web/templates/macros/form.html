@@ -1,0 +1,26 @@
+{% macro render_field(field=None, class=None, div_class=None, placeholder=None) %}
+<div class="{{ div_class or '' }}">
+    {% if field.type == 'BooleanField' %}
+    <label class="{{ class or '' }}">
+        {{ field() }}
+        <span class="label-text">{{ field.label.text }}</span>
+    </label>
+    {% else %}
+    {{ field.label }}
+
+    {% set field_id = field.id ~ 'Input' %}
+
+    {% if placeholder %}
+    {{ field(class=class, id=field_id, placeholder=placeholder) }}
+    {% else %}
+    {{ field(class=class, id=field_id) }}
+    {% endif %}
+
+    {% for e in field.errors %}
+    <div class="fs-error u-add-bottom">{{ e }}</div>
+    {% endfor %}
+
+    <div id="{{ field_id }}ClientError" class="fs-error u-add-bottom" hidden aria-live="polite"></div>
+    {% endif %}
+</div>
+{% endmacro %}
