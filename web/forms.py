@@ -346,13 +346,13 @@ class EditProjectForm(FlaskForm):
     )
     image = FileField(
         "Image",
-        validators=file_validators(max_size_mb=IMAGE_MAX_SIZE_MB, is_image=True, required=True),
-        render_kw=file_render_kw(max_size_mb=IMAGE_MAX_SIZE_MB, is_image=True, required=True),
+        validators=file_validators(max_size_mb=IMAGE_MAX_SIZE_MB, is_image=True),
+        render_kw=file_render_kw(max_size_mb=IMAGE_MAX_SIZE_MB, is_image=True),
     )
     thumbnail = FileField(
         "Thumbnail",
-        validators=file_validators(max_size_mb=THUMBNAIL_MAX_SIZE_MB, is_image=True, required=True),
-        render_kw=file_render_kw(max_size_mb=THUMBNAIL_MAX_SIZE_MB, is_image=True, required=True),
+        validators=file_validators(max_size_mb=THUMBNAIL_MAX_SIZE_MB, is_image=True),
+        render_kw=file_render_kw(max_size_mb=THUMBNAIL_MAX_SIZE_MB, is_image=True),
     )
     thumbnail_alt = StringField(
         "Alt Text",
