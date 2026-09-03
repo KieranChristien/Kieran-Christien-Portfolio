@@ -18,10 +18,14 @@ def create_app():
     app = Flask(__name__)
 
     # Configuration
-    app.config['SECRET_KEY'] = env.get('SECRET_KEY')
+    secret_key = env.get("SECRET_KEY")
+    if not secret_key:
+        raise RuntimeError("SECRET_KEY is not configured")
+
+    app.config['SECRET_KEY'] = secret_key
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-    database_url = env.get('DB_URI')
+    database_url = env.get('DATABASE_URI')
     if not database_url:
         raise RuntimeError("DATABASE_URI is not configured")
 
@@ -34,6 +38,14 @@ def create_app():
         "STORAGE_URI",
         "memory://"
     )
+
+    app.config["MAILJET_API_KEY"] = env.get("MAILJET_API_KEY")
+    app.config["MAILJET_SECRET_KEY"] = env.get("MAILJET_SECRET_KEY")
+    app.config["WORK_EMAIL"] = env.get("EMAIL_ADDRESS")
+
+    app.config["CLOUDINARY_NAME"] = env.get("CLOUDINARY_NAME")
+    app.config["CLOUDINARY_KEY"] = env.get("CLOUDINARY_KEY")
+    app.config["CLOUDINARY_SECRET"] = env.get("CLOUDINARY_SECRET")
 
     # Extensions
     Bootstrap(app)
@@ -49,9 +61,9 @@ def create_app():
 
     # Cloudinary configuration
     cloudinary.config(
-        cloud_name=env.get("CLOUDINARY_NAME"),
-        api_key=env.get("CLOUDINARY_KEY"),
-        api_secret=env.get("CLOUDINARY_SECRET"),
+        cloud_name=app.config["CLOUDINARY_NAME"],
+        api_key=app.config["CLOUDINARY_KEY"],
+        api_secret=app.config["CLOUDINARY_SECRET"],
         secure=True,
     )
 
