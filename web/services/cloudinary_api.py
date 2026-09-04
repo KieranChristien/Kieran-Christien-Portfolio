@@ -219,7 +219,7 @@ def delete_image_file(image_id: str | None) -> str | None:
         try:
             _delete_from_cloudinary(image_id)
             current_app.logger.info(
-                "[Cloudinary] Image deleted %s successfully.",
+                "[Cloudinary] Deleted %s successfully.",
                 image_id,
             )
             return None
