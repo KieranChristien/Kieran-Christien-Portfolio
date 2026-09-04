@@ -65,15 +65,19 @@ def upload_image_file(file_storage: FileStorage, folder="portfolio/projects", ea
         attempt_number = attempt + 1
 
         current_app.logger.info(
-            "[Cloudinary] Uploading image "
+            "[Cloudinary] Uploading %s "
             "(attempt %s/%s)...",
+            file_storage.filename,
             attempt_number,
             MAX_ATTEMPTS,
         )
 
         try:
             response = _upload_to_cloudinary(file_storage, **kwargs)
-            current_app.logger.info("[Cloudinary] Image uploaded successfully.")
+            current_app.logger.info(
+                "[Cloudinary] Image %s uploaded successfully.",
+                file_storage.filename,
+            )
             return response, None
         except TimeoutError:
             current_app.logger.exception(
@@ -205,15 +209,19 @@ def delete_image_file(image_id: str | None) -> str | None:
         attempt_number = attempt + 1
 
         current_app.logger.info(
-            "[Cloudinary] Deleting image "
+            "[Cloudinary] Deleting %s "
             "(attempt %s/%s)...",
+            image_id,
             attempt_number,
             MAX_ATTEMPTS,
         )
 
         try:
             _delete_from_cloudinary(image_id)
-            current_app.logger.info("[Cloudinary] Image deleted successfully.")
+            current_app.logger.info(
+                "[Cloudinary] Image deleted %s successfully.",
+                image_id,
+            )
             return None
         except TimeoutError:
             current_app.logger.exception(
