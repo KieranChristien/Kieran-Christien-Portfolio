@@ -1,14 +1,8 @@
-from flask_uploads import UploadSet, IMAGES
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, FileField, FileRequired, FileSize
 from wtforms import (BooleanField, EmailField, PasswordField, SelectField, StringField, SubmitField,
                      TextAreaField, URLField)
 from wtforms.validators import Email, InputRequired, Length, Optional, URL
-
-# ------------------------------------------------------------------------------------------------------
-# Upload Sets
-# ------------------------------------------------------------------------------------------------------
-images = UploadSet("images", IMAGES)
 
 # ------------------------------------------------------------------------------------------------------
 # Field Lengths
@@ -121,6 +115,13 @@ def password_render_kw(required: bool = False) -> dict:
 # FILE VALIDATION
 # ------------------------------------------------------------------------------------------------------
 BYTES_PER_MB = 1024 * 1024
+IMAGE_EXTENSIONS = {
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "webp",
+}
 
 IMAGE_INVALID = "Please submit a valid image."
 FILE_REQUIRED = "This file is required."
@@ -141,7 +142,7 @@ def file_validators(max_size_mb: int = -1, is_image: bool = False, required: boo
     if is_image:
         validators.append(
             FileAllowed(
-                images,
+                IMAGE_EXTENSIONS,
                 message=IMAGE_INVALID,
             )
         )
@@ -154,7 +155,7 @@ def file_render_kw(max_size_mb: int = -1, is_image: bool = False, required: bool
 
     if is_image:
         render_kw["accept"] = ",".join(
-            f".{extension}" for extension in images.extensions
+            f".{extension}" for extension in IMAGE_EXTENSIONS
         )
         render_kw["data-msg-invalid-file"] = IMAGE_INVALID
 
