@@ -13,6 +13,9 @@ if __name__ != '__main__':
     app.logger.handlers = gunicorn_logger.handlers
     app.logger.setLevel(gunicorn_logger.level)
 
+    # Prevent the record from propagating to the root logger
+    app.logger.propagate = False
+
 if __name__ == '__main__':
     is_debug = os.environ.get("DEBUG", "False").lower() == "true"
     port = int(os.environ.get('PORT', 5000))
