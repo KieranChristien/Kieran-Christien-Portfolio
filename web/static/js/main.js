@@ -517,9 +517,12 @@
         /* copyright year
          * ------------------------------------------------------ */
         const ssCopyrightYear = function () {
-            const yearEl = document.querySelector('.copyright-year');
-            if (yearEl) {
-                yearEl.textContent = new Date().getFullYear().toString();
+            const copyrightEl = document.querySelector('.copyright');
+            if (copyrightEl) {
+                copyrightEl.textContent = copyrightEl.textContent.replace(
+                    "[YEAR]",
+                    new Date().getFullYear().toString()
+                );
             }
         }; // end ssCopyrightYear
 
@@ -550,7 +553,6 @@
                         if (!file) {
                             field.setCustomValidity(
                                 field.required ? (field.dataset.msgRequired || '') : ''
-
                             );
 
                             return field.checkValidity();
