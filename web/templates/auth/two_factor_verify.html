@@ -1,0 +1,66 @@
+
+{% extends "base.html" %}
+{% from "macros/alerts.html" import flash_alerts %}
+{% from "macros/auth.html" import admin_nav %}
+{% from "macros/form.html" import render_field %}
+
+{% block navbar %}
+<nav class="s-header__nav">
+    <ul>
+        {{ admin_nav(current_user) }}
+    </ul>
+</nav>
+{% endblock %}
+
+{% block content %}
+<section>
+    <br><br><br>
+
+    <div class="row section-header section-header--dark">
+        <div class="column lg-12">
+            <h3 class="text-pretitle">Account Security</h3>
+            <h1 class="text-display-title">
+                Verify Your Identity
+            </h1>
+        </div>
+    </div>
+
+    <div class="row row-x-center text-center s-contact__content">
+        <div class="column lg-12 tab-12">
+            {{ flash_alerts() }}
+
+            <p class="lead">
+                Enter the six-digit code from your authenticator
+                app to complete the login process.
+            </p>
+
+            <p class="lead">
+                If you cannot access your authenticator, you can
+                enter one of your unused recovery codes instead.
+            </p>
+
+            <form method="post" novalidate>
+                {{ form.csrf_token }}
+
+                {{
+                    render_field(
+                        form.code,
+                        class="u-fullwidth",
+                        placeholder="000000"
+                    )
+                }}
+
+                <div class="btn-wrap">
+                    {{
+                        form.submit(
+                            value="Verify",
+                            class="btn--primary u-fullwidth"
+                        )
+                    }}
+                </div>
+            </form>
+
+        </div>
+    </div>
+</section>
+{% endblock %}

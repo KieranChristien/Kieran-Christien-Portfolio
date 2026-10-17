@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% from "macros/alerts.html" import flash_alerts %}
+{% from "macros/auth.html" import admin_nav %}
+{% from "macros/form.html" import render_field %}
+
+{% block navbar %}
+<nav class="s-header__nav">
+    <ul>
+        {{ admin_nav(current_user) }}
+    </ul>
+</nav>
+{% endblock %}
+
+{% block content %}
+<section>
+    <br><br><br>
+
+    <div class="row section-header section-header--dark">
+        <div class="column lg-12">
+            <h3 class="text-pretitle">Account Security</h3>
+            <h1 class="text-display-title">
+                Two-Factor Authentication
+            </h1>
+        </div>
+    </div>
+
+    <div class="row row-x-center text-center s-contact__content">
+        <div class="column lg-12 tab-12">
+            {{ flash_alerts() }}
+
+
+            {% if recovery_codes %}
+            <h2>Save your recovery codes</h2>
+
+            <p class="lead">
+                <strong>
+                    These codes are shown only once.
+                </strong>
+                Store them somewhere safe, separate from
+                this device. Each code can be used once if
+                you lose access to your authenticator.
+            </p>
+
+            <ul id="recovery-codes">
+                {% for code in recovery_codes %}
+                <li><code>{{ code }}</code></li>
+                {% endfor %}
+            </ul>
+
+            <button
+                    type="button"
+                    class="btn u-fullwidth"
+                    id="download-recovery-codes"
+            >
+                Download recovery codes (.txt)
+            </button>
+
+            <script>
+                document
+                    .getElementById("download-recovery-codes")
+                    .addEventListener("click", function () {
+                        const codes = Array.from(
+                            document.querySelectorAll(
+                                "#recovery-codes code"
+                            )
+                        ).map(function (element) {
+                            return element.textContent.trim();
+                        });
+
+                        const content = [
+                            "Two-Factor Authentication recovery codes",
+                            "===============================================",
+                            "",
+                            "You can use these to log in, in case you lose access to your authenticator app codes.",
+                            "",
+                            "You can only use each recovery code once.",
+                            "",
+                            "Keep these safe and secure! Printing them out is a very good idea.",
+                            "",
+                            ...codes
+                        ].join("\r\n");
+
+                        const blob = new Blob(
+                            [content],
+                            {type: "text/plain;charset=utf-8"}
+                        );
+
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+
+                        link.href = url;
+                        link.download =
+                            "two-factor-authentication-recovery-codes.txt";
+
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+
+                        window.setTimeout(function () {
+                            URL.revokeObjectURL(url);
+                        }, 1000);
+                    });
+            </script>
+
+            <hr>
+            {% endif %}
+
+            {% if current_user.totp_enabled %}
+
+            <p class="lead">
+                Authenticator-app two-factor authentication
+                is <strong>enabled</strong> for
+                {{ current_user.email }}.
+            </p>
+
+            <h2>Disable two-factor authentication</h2>
+
+            <p class="lead">
+                For your protection, confirm your current
+                password and provide a current authenticator
+                code or an unused recovery code.
+            </p>
+
+            <form
+                    method="post"
+                    action="{{ url_for('auth.disable_two_factor') }}"
+                    novalidate
+            >
+                {{ disable_form.csrf_token }}
+
+                {{
+                render_field(
+                disable_form.password,
+                class="u-fullwidth",
+                placeholder="Current password"
+                )
+                }}
+
+                {{
+                render_field(
+                disable_form.code,
+                class="u-fullwidth",
+                placeholder="6-digit code or recovery code"
+                )
+                }}
+
+                {{
+                disable_form.submit(
+                class="btn--primary u-fullwidth"
+                )
+                }}
+            </form>
+
+            {% else %}
+
+            <p>
+                Use an authenticator app such as Google
+                Authenticator, Microsoft Authenticator,
+                1Password, or another TOTP-compatible app.
+                Scan the QR code below, or enter the setup
+                key manually.
+            </p>
+
+            {% if qr_data_uri %}
+            <p>
+                <img
+                        src="{{ qr_data_uri }}"
+                        alt="Authenticator app setup QR code"
+                        width="350"
+                        height="350"
+                >
+            </p>
+            {% endif %}
+
+            <p>
+                Manual setup key:
+                <code>{{ secret }}</code>
+            </p>
+
+            <h2>Confirm setup</h2>
+
+            <p>
+                Enter the six-digit code currently shown
+                in your authenticator app to finish enabling
+                two-factor authentication.
+            </p>
+
+            <form
+                    method="post"
+                    action="{{ url_for('auth.enable_two_factor') }}"
+                    novalidate
+            >
+                {{ code_form.csrf_token }}
+
+                {{
+                render_field(
+                code_form.code,
+                class="u-fullwidth",
+                placeholder="000000"
+                )
+                }}
+
+                <div class="btn-wrap">
+                    {{
+                    code_form.submit(
+                    value="Enable two-factor authentication",
+                    class="btn--primary u-fullwidth"
+                    )
+                    }}
+                </div>
+            </form>
+
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

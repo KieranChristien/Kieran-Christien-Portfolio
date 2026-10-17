@@ -1,4 +1,6 @@
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+import pyotp
+from flask import (Blueprint, after_this_request, current_app, flash, redirect, render_template, request, session,
+                   url_for, )
 from flask_login import current_user, login_user, login_required, logout_user, fresh_login_required
 from sqlalchemy.exc import IntegrityError
 from urllib.parse import urljoin, urlparse
@@ -6,8 +8,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from web.decorators import owner_required, self_or_owner_required
 from web.extensions import db, limiter, login_manager
-from web.forms import EditAdminForm, LoginAdminForm, RegisterAdminForm
+from web.forms import DisableTwoFactorForm, EditAdminForm, LoginAdminForm, RegisterAdminForm, TwoFactorCodeForm
 from web.models import Admin
+from web.two_factor import (decrypt_totp_secret, encrypt_totp_secret, generate_recovery_codes, make_qr_data_uri,
+                            matching_totp_step, verify_totp_or_recovery_code, )
 
 auth = Blueprint('auth', __name__)
 
@@ -47,6 +51,65 @@ def flash_and_render_editor(message: str, category: str, form, admin: Admin | No
                             status_code=200) -> tuple[str, int]:
     flash(message, category)
     return render_editor(form=form, admin=admin, is_edit=is_edit, status_code=status_code)
+
+
+def _set_no_store_headers() -> None:
+    """Prevent caching of pages containing secrets or recovery codes."""
+
+    @after_this_request
+    def add_no_store_headers(response):
+        response.headers["Cache-Control"] = (
+            "no-store, no-cache, must-revalidate, private"
+        )
+        response.headers["Pragma"] = "no-cache"
+        return response
+
+
+def _render_two_factor_settings(
+        admin: Admin,
+        recovery_codes=None,
+):
+    """Render the user's 2FA settings and enrollment QR code."""
+    _set_no_store_headers()
+
+    secret = None
+    qr_data_uri = None
+
+    if not admin.totp_enabled:
+        # Create a seed on first visit to the setup page.
+        if not admin.totp_secret:
+            admin.totp_secret = encrypt_totp_secret(
+                pyotp.random_base32()
+            )
+            db.session.commit()
+
+        secret = decrypt_totp_secret(
+            admin.totp_secret
+        )
+
+        provisioning_uri = pyotp.TOTP(
+            secret
+        ).provisioning_uri(
+            name=admin.email,
+            issuer_name=current_app.config.get(
+                "TOTP_ISSUER",
+                "Kieran Christien Portfolio",
+            ),
+        )
+
+        qr_data_uri = make_qr_data_uri(
+            provisioning_uri
+        )
+
+    return render_template(
+        "auth/two_factor.html",
+        current_user=current_user,
+        code_form=TwoFactorCodeForm(),
+        disable_form=DisableTwoFactorForm(),
+        secret=secret,
+        qr_data_uri=qr_data_uri,
+        recovery_codes=recovery_codes,
+    )
 
 
 # Register new admins into the Admin database
@@ -229,18 +292,282 @@ def login():
             flash("Email or password incorrect, please try again.", "error")
             return render_template("auth/login.html", form=form, current_user=current_user)
 
-        login_user(admin_to_login)
-
-        # Get the page the user was trying to access
-        next_page = request.args.get('next', '')
+        # Determine where the user should go after login.
+        next_page = request.args.get("next", "")
 
         if not next_page or not is_safe_url(next_page):
-            next_page = url_for('auth.administration')
+            next_page = url_for("auth.administration")
 
-        current_app.logger.info("%s logged in.", admin_to_login.name)
+        # Clear pre-authentication session state.
+        session.clear()
+
+        if admin_to_login.totp_enabled:
+            # The user is not authenticated yet.
+            # Store only a pending user ID until factor two succeeds.
+            session["pending_2fa_user_id"] = admin_to_login.id
+            session["pending_2fa_next"] = next_page
+
+            current_app.logger.info(
+                "Password accepted; awaiting second factor "
+                "for admin id %s.",
+                admin_to_login.id,
+            )
+
+            return redirect(
+                url_for("auth.verify_two_factor"),
+                303,
+            )
+
+        # Accounts without 2FA retain the existing login flow.
+        login_user(admin_to_login, fresh=True)
+
+        current_app.logger.info(
+            "%s logged in.",
+            admin_to_login.name,
+        )
+
         return redirect(next_page, 303)
 
     return render_template("auth/login.html", form=form, current_user=current_user)
+
+
+@auth.route("/admin/two-factor", methods=["GET"])
+@fresh_login_required
+def two_factor():
+    """Display authenticator setup and account security settings."""
+    admin = db.session.get(Admin, current_user.id)
+
+    if not admin:
+        logout_user()
+        return redirect(url_for("auth.login"), 303)
+
+    return _render_two_factor_settings(admin)
+
+
+@auth.route("/admin/two-factor/enable", methods=["POST"])
+@limiter.limit("5 per minute")
+@fresh_login_required
+def enable_two_factor():
+    """Enable 2FA only after the user proves possession of the seed."""
+    admin = db.session.get(Admin, current_user.id)
+    form = TwoFactorCodeForm()
+
+    if (
+            not admin
+            or admin.totp_enabled
+            or not admin.totp_secret
+    ):
+        flash(
+            "Start setup from the two-factor authentication "
+            "page and try again.",
+            "error",
+        )
+        return redirect(url_for("auth.two_factor"), 303)
+
+    if not form.validate_on_submit():
+        flash(
+            "Enter the six-digit code from your authenticator app.",
+            "error",
+        )
+        return redirect(url_for("auth.two_factor"), 303)
+
+    secret = decrypt_totp_secret(admin.totp_secret)
+
+    step = matching_totp_step(
+        secret,
+        form.code.data,
+    )
+
+    if step is None:
+        flash(
+            "That authenticator code is invalid or expired. "
+            "Try the latest code.",
+            "error",
+        )
+        return redirect(url_for("auth.two_factor"), 303)
+
+    # Generate recovery codes only after successful enrollment.
+    recovery_codes, hashed_recovery_codes = (
+        generate_recovery_codes()
+    )
+
+    admin.totp_enabled = True
+    admin.totp_last_used_step = step
+    admin.totp_recovery_codes = hashed_recovery_codes
+
+    db.session.commit()
+
+    current_app.logger.info(
+        "Two-factor authentication enabled for admin id %s.",
+        admin.id,
+    )
+
+    flash(
+        "Two-factor authentication is enabled. "
+        "Save the recovery codes below now.",
+        "success",
+    )
+
+    # Display plaintext recovery codes in this response only.
+    return _render_two_factor_settings(
+        admin,
+        recovery_codes=recovery_codes,
+    )
+
+
+@auth.route("/admin/two-factor/disable", methods=["POST"])
+@limiter.limit("5 per minute")
+@fresh_login_required
+def disable_two_factor():
+    """Disable 2FA only after password and factor verification."""
+    admin = db.session.get(Admin, current_user.id)
+    form = DisableTwoFactorForm()
+
+    if not admin or not admin.totp_enabled:
+        flash(
+            "Two-factor authentication is not enabled.",
+            "notice",
+        )
+        return redirect(url_for("auth.two_factor"), 303)
+
+    if not form.validate_on_submit():
+        flash(
+            "Enter your current password and an authenticator "
+            "or recovery code.",
+            "error",
+        )
+        return redirect(url_for("auth.two_factor"), 303)
+
+    # Require the current password.
+    if not check_password_hash(
+            admin.password,
+            form.password.data,
+    ):
+        current_app.logger.warning(
+            "Invalid password during 2FA disable "
+            "for admin id %s.",
+            admin.id,
+        )
+
+        flash(
+            "Unable to disable two-factor authentication "
+            "with those details.",
+            "error",
+        )
+        return redirect(url_for("auth.two_factor"), 303)
+
+    # Also require and validate the second factor.
+    if not verify_totp_or_recovery_code(
+            admin,
+            form.code.data,
+    ):
+        current_app.logger.warning(
+            "Invalid second factor during 2FA disable "
+            "for admin id %s.",
+            admin.id,
+        )
+
+        flash(
+            "Unable to disable two-factor authentication "
+            "with those details.",
+            "error",
+        )
+        return redirect(url_for("auth.two_factor"), 303)
+
+    admin.totp_enabled = False
+    admin.totp_secret = None
+    admin.totp_recovery_codes = None
+    admin.totp_last_used_step = None
+
+    db.session.commit()
+
+    current_app.logger.info(
+        "Two-factor authentication disabled for admin id %s.",
+        admin.id,
+    )
+
+    flash(
+        "Two-factor authentication has been disabled.",
+        "success",
+    )
+
+    return redirect(url_for("auth.two_factor"), 303)
+
+
+@auth.route("/admin/login/2fa", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
+def verify_two_factor():
+    """Complete login after password verification and TOTP."""
+    _set_no_store_headers()
+
+    pending_user_id = session.get("pending_2fa_user_id")
+
+    admin: Admin | None = (
+        db.session.get(Admin, pending_user_id)
+        if pending_user_id is not None
+        else None
+    )
+
+    # Do not accept a stale or invalid pending login.
+    if not admin or not admin.totp_enabled:
+        session.clear()
+
+        flash(
+            "Please log in again to continue.",
+            "notice",
+        )
+
+        return redirect(url_for("auth.login"), 303)
+
+    form = TwoFactorCodeForm()
+
+    if form.validate_on_submit():
+        if verify_totp_or_recovery_code(
+                admin,
+                form.code.data,
+        ):
+            # Persist used TOTP steps or consumed recovery codes
+            # before granting the authenticated session.
+            db.session.commit()
+
+            next_page = session.get(
+                "pending_2fa_next",
+                "",
+            )
+
+            # Remove temporary pre-authentication state.
+            session.clear()
+
+            # Authenticate only after factor two succeeds.
+            login_user(admin, fresh=True)
+
+            if not next_page or not is_safe_url(next_page):
+                next_page = url_for("auth.administration")
+
+            current_app.logger.info(
+                "%s logged in with two-factor authentication.",
+                admin.name,
+            )
+
+            return redirect(next_page, 303)
+
+        current_app.logger.warning(
+            "Invalid second factor during login "
+            "for admin id %s.",
+            admin.id,
+        )
+
+        flash(
+            "That code is invalid, expired, or already used. "
+            "Try again.",
+            "error",
+        )
+
+    return render_template(
+        "auth/two_factor_verify.html",
+        form=form,
+        current_user=current_user,
+    )
 
 
 @auth.route('/admin/logout', methods=["POST"])

@@ -261,6 +261,48 @@ class LoginAdminForm(FlaskForm):
     submit = SubmitField("Login")
 
 
+# Form used for authenticator and recovery-code verification.
+class TwoFactorCodeForm(FlaskForm):
+    code = StringField(
+        "",
+        validators=[
+            InputRequired(),
+            Length(min=6, max=6),
+        ],
+        render_kw={
+            "required": True,
+            "autocomplete": "one-time-code",
+            "maxlength": 6,
+        },
+    )
+
+    submit = SubmitField("Verify")
+
+
+# Form required to disable 2FA.
+class DisableTwoFactorForm(FlaskForm):
+    password = PasswordField(
+        "Current password",
+        validators=password_validators(True),
+        render_kw=password_render_kw(True),
+    )
+
+    code = StringField(
+        "Authenticator or recovery code",
+        validators=[
+            InputRequired(),
+            Length(min=6, max=6),
+        ],
+        render_kw={
+            "required": True,
+            "autocomplete": "one-time-code",
+            "maxlength": 6,
+        },
+    )
+
+    submit = SubmitField("Disable two-factor authentication")
+
+
 # Create a form to register/edit admins
 class EditAdminForm(FlaskForm):
     name = StringField(

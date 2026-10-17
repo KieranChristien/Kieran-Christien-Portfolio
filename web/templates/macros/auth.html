@@ -1,9 +1,17 @@
 {% macro admin_nav(current_user=None) %}
 {% if current_user and current_user.is_authenticated %}
+
 <li>
     <a href="{{ url_for('auth.administration') }}">
         Administration
     </a>
 </li>
+
+<li>
+    <a href="{{ url_for('auth.two_factor') }}">
+        Two-Factor Authentication
+    </a>
+</li>
+
 {% endif %}
 {% endmacro %}

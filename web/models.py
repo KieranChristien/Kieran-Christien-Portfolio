@@ -1,7 +1,7 @@
 from flask import current_app
 from flask_login import UserMixin
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Boolean, Integer, String
+from sqlalchemy import Boolean, Integer, String, Text, false
 from werkzeug.security import generate_password_hash
 
 from web.extensions import db
@@ -15,6 +15,29 @@ class Admin(UserMixin, db.Model):
     password: Mapped[str] = mapped_column(String(256), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     is_owner: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Encrypted TOTP authenticator secret.
+    totp_secret: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    # Existing administrators have 2FA disabled by default.
+    totp_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=false(),
+    )
+    # JSON-encoded list of hashed, one-time recovery codes.
+    totp_recovery_codes: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    # Last accepted TOTP time step, preventing code reuse.
+    totp_last_used_step: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
 
 
 # Create a Project table for recent projects

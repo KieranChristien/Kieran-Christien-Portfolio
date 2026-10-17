@@ -1,5 +1,6 @@
 import cloudinary
 import os
+from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 from flask import Flask
 from flask_bootstrap import Bootstrap
@@ -19,6 +20,25 @@ def create_app():
 
     # Configuration
     secret_key = env.get("SECRET_KEY")
+    mfa_encryption_key = env.get("MFA_ENCRYPTION_KEY")
+
+    if not mfa_encryption_key:
+        raise RuntimeError(
+            "MFA_ENCRYPTION_KEY is not configured"
+        )
+
+    try:
+        Fernet(mfa_encryption_key.encode("ascii"))
+    except (ValueError, TypeError, UnicodeEncodeError) as exc:
+        raise RuntimeError(
+            "MFA_ENCRYPTION_KEY must be a valid Fernet key"
+        ) from exc
+
+    app.config["MFA_ENCRYPTION_KEY"] = mfa_encryption_key
+    app.config["TOTP_ISSUER"] = env.get(
+        "TOTP_ISSUER",
+        "Kieran Christien Portfolio",
+    )
     if not secret_key:
         raise RuntimeError("SECRET_KEY is not configured")
 
